@@ -1,0 +1,18 @@
+{
+  "name": "trustee-referral-monitor",
+  "version": "1.0.0",
+  "description": "Automated monitor for Trustee referral key tracking",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "playwright": "^1.63.0"
+  }
+}
