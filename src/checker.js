@@ -14,7 +14,7 @@ async function main() {
 
   try {
     // 1. Crawl to find pages
-    const pages = await crawlSite(browser, rootUrl, 5); // limiting to 5 for speed
+    const pages = await crawlSite(browser, rootUrl, 10); // quick test
     console.log(`Found ${pages.length} pages to test.`);
 
     // 2. Run scenarios on each page

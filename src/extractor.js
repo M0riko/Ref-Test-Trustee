@@ -17,7 +17,9 @@ export async function extractLinks(page) {
       return href.includes('apps.apple.com') || 
              href.includes('play.google.com') || 
              href.includes('appsflyer') || 
-             href.includes('branch.io');
+             href.includes('branch.io') ||
+             href.includes('.apk') ||
+             href.includes('app.link');
     }))];
 
     return { internal, stores };
