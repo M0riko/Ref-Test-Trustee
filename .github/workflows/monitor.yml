@@ -2,48 +2,84 @@ name: Daily Referral Monitor
 
 on:
   schedule:
-    # Run automatically every day at 03:00 AM UTC
-    - cron: '0 3 * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+    - cron: '0 6 * * *'
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   monitor:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    concurrency:
+      group: referral-monitor
+      cancel-in-progress: false
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install Dependencies
+        run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
 
-      - name: Run Trustee Monitor
+      - name: Run Monitor
         run: npm start
         env:
-          MAX_PAGES: 15
-          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          TARGET_URL: ${{ secrets.TARGET_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          CRAWLER_MAX_PAGES: 300
 
-      - name: Upload Report and Status
-        uses: actions/upload-artifact@v3
+      - name: Generate Report
+        if: always()
+        run: npm run report
+
+      - name: Upload Report Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: monitor-results
+          name: monitor-reports
           path: |
             report.html
             status.json
+          retention-days: 30
 
-      - name: Check Status and Fail Workflow if Needed
-        run: |
-          STATUS=$(cat status.json | jq -r '.overall')
-          if [ "$STATUS" = "FAIL" ]; then
-            echo "Monitor detected lost referral keys!"
-            exit 1
-          fi
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Selftest
+        run: npm run selftest
+
+      - name: Upload Selftest Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selftest-report
+          path: selftest-report.json
+          retention-days: 30
