@@ -3,6 +3,7 @@ import { startRun, finishRun, savePage, saveCheck, getConsecutiveFailures, incre
 import { extractLinks, extractKeyFromUrl } from './extractor.js';
 import { crawlSite } from './crawler.js';
 import { runS1, runS2, runS3, runS5, runS6, runS7 } from './scenarios.js';
+import { notifyStart, notifySuccess, notifyFailure } from './notifier.js';
 
 const DEVICE_PROFILES = [
   { 
@@ -105,6 +106,7 @@ async function main() {
   const runId = startRun();
   console.log(`--- Starting Run #${runId} ---`);
 
+  // Discover pages first so we can report count to Telegram
   const browser = await chromium.launch({ headless: true });
   let runFailed = false;
 
@@ -113,6 +115,9 @@ async function main() {
     const totalChecks = pages.length * 7 * DEVICE_PROFILES.length;
     console.log(`\nFound ${pages.length} pages × 7 scenarios × ${DEVICE_PROFILES.length} devices = ${totalChecks} checks`);
     console.log(`Running with parallelism (up to 6 concurrent)...\n`);
+
+    // Telegram: notify run started
+    await notifyStart(runId, pages.length);
 
     for (let i = 0; i < pages.length; i++) {
       const url = pages[i];
@@ -141,15 +146,30 @@ async function main() {
     }
 
     finishRun(runId, 'COMPLETED');
-    resetFailures();             // reset consecutive failure counter on success
-    await hcPing();              // ✅ ping success
+    resetFailures();
+    await hcPing(); // ✅ ping success
+
+    // Telegram: send summary
+    const allChecks = pages.flatMap(() => []);
+    const db = (await import('./storage.js')).getDb();
+    const checks = db.prepare(`SELECT status, scenario FROM checks WHERE run_id = ?`).all(runId);
+    const pass    = checks.filter(c => c.status === 'PASS').length;
+    const fail    = checks.filter(c => c.status.startsWith('FAIL')).length;
+    const noLink  = checks.filter(c => c.status === 'NO_STORE_LINK').length;
+    const incon   = checks.filter(c => c.status === 'INCONCLUSIVE').length;
+    const dFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.includes('_desktop')).length;
+    const iFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.includes('_mobile_ios')).length;
+    const aFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.includes('_mobile_android')).length;
+    await notifySuccess(runId, { pass, fail, noStoreLink: noLink, inconclusive: incon, pages: pages.length, desktopFail: dFail, iosFail: iFail, androidFail: aFail });
+
     console.log(`\n--- Run #${runId} Completed ---`);
   } catch (err) {
     console.error(`Run failed:`, err);
     runFailed = true;
     finishRun(runId, 'FAILED');
-    incrementFailures();         // track consecutive failures
-    await hcPing('/fail');       // ❌ ping failure
+    incrementFailures();
+    await notifyFailure(runId, err.message); // 🚨 Telegram alert
+    await hcPing('/fail');                   // ❌ HC.io ping
   } finally {
     await browser.close();
   }

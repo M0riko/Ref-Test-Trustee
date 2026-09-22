@@ -27,7 +27,10 @@ jobs:
       - name: Run Trustee Monitor
         run: npm start
         env:
-          MAX_PAGES: 15 # Adjust to scan more pages if needed
+          MAX_PAGES: 15
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Upload Report and Status
         uses: actions/upload-artifact@v3
