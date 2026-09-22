@@ -101,13 +101,29 @@ export function generateReport() {
       else if (c.scenario.endsWith('_mobile_android')) scMap[sc].android = c;
     });
 
+    const scenarioDescriptions = {
+      'S1': 'Навігація з головної (через клік)',
+      'S2': 'Прямий перехід за посиланням',
+      'S3': 'Перезавантаження сторінки (F5)',
+      'S4': 'Ланцюгова навігація (Multi-hop)',
+      'S5': 'Заміна старого ключа новим',
+      'S6': 'Контроль (захід без ключа)',
+      'S7': 'Ключ зі спецсимволами',
+      'S8': 'Виживання з UTM-мітками',
+      'S9': 'Екстремально довгий ключ'
+    };
+
     let tbody = '';
     const sortedScenarios = Object.keys(scMap).sort();
     for (const sc of sortedScenarios) {
       const row = scMap[sc];
+      const desc = scenarioDescriptions[sc] || '';
       tbody += `
         <tr>
-          <td class="sc-name"><strong>${sc}</strong></td>
+          <td class="sc-name">
+            <strong>${sc}</strong>
+            <div class="sc-desc">${desc}</div>
+          </td>
           ${renderStatusCell(row.win)}
           ${renderStatusCell(row.mac)}
           ${renderStatusCell(row.ios)}
@@ -200,6 +216,7 @@ export function generateReport() {
     .matrix-table tr:last-child td { border-bottom: none; }
     .matrix-table tr:hover td { background: rgba(255, 255, 255, 0.03); }
     .sc-name { text-align: left !important; color: #e2e8f0; padding-left: 24px !important; }
+    .sc-desc { font-size: 0.85em; color: #94a3b8; font-weight: 400; margin-top: 6px; line-height: 1.3; }
     
     /* Status Cells */
     .status-PASS { color: #34d399; font-weight: 600; }
