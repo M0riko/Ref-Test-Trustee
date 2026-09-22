@@ -1,79 +1,99 @@
 import http from 'http';
 
-const PORT = 3000;
+const PORT = process.env.MOCK_PORT ? parseInt(process.env.MOCK_PORT, 10) : 3000;
+
+const storeLink = (key) => {
+  if (key) return `https://apps.apple.com/app/id12345?r=${key}`;
+  return 'https://apps.apple.com/app/id12345';
+};
+
+const nav = `
+  <a href="/">Home</a>
+  <a href="/broken">Broken</a>
+  <a href="/altered">Altered</a>
+  <a href="/stale-key">Stale</a>
+  <a href="/storage-only">Storage only</a>
+  <a href="/no-store">No store</a>
+  <a href="/no-key-link">No key link</a>
+  <a href="/timeout">Timeout</a>
+`;
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const key = url.searchParams.get('r') || '';
-  
+
   if (url.pathname === '/timeout') {
-    // DO NOT writeHead or end, just wait and let it timeout.
     setTimeout(() => {
-      // 4000ms is > SCENARIO_TIMEOUT_MS (2000) so checker fails,
-      // but < crawler timeout (15000) so crawler succeeds.
-      try { res.end('<html><body><a href="https://apps.apple.com/app/id123">App</a></body></html>'); } catch {}
+      try {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`<html><body>${nav}<a href="${storeLink(key)}">App</a></body></html>`);
+      } catch {}
     }, 4000);
     return;
   }
 
-  res.writeHead(200, { 'Content-Type': 'text/html' });
-  
+  if (url.pathname === '/go-store') {
+    res.writeHead(302, { Location: storeLink(key) });
+    res.end();
+    return;
+  }
+
   if (url.pathname === '/') {
-    res.end(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Mock Trustee - Good</title></head>
-      <body>
-        <h1>Welcome to Mock Trustee</h1>
-        <a href="https://apps.apple.com/app/id12345?r=${key}">App Store</a>
-        <a href="/broken?r=${key}">Go to Broken Page</a>
-        <a href="/no-key-link">Go to No Key Link Page</a>
-        <a href="/timeout">Go to Timeout</a>
-        <a href="/stale-key">Go to Stale Key</a>
-      </body>
-      </html>
-    `);
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!DOCTYPE html><html><body>
+      <h1>Mock Trustee</h1>
+      ${nav}
+      <a href="${storeLink(key)}">App Store</a>
+    </body></html>`);
   } else if (url.pathname === '/broken') {
-    res.end(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Mock Trustee - Broken</title></head>
-      <body>
-        <h1>Broken Page</h1>
-        <a href="https://play.google.com/store/apps/details?id=com.trustee">Google Play (NO KEY!)</a>
-      </body>
-      </html>
-    `);
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!DOCTYPE html><html><body>
+      <h1>Broken Page</h1>
+      ${nav}
+      <a href="https://play.google.com/store/apps/details?id=com.trustee">Google Play (no key)</a>
+    </body></html>`);
+  } else if (url.pathname === '/altered') {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!DOCTYPE html><html><body>
+      <h1>Altered key</h1>
+      ${nav}
+      <a href="https://apps.apple.com/app/id12345?r=NOT_THE_KEY">App Store</a>
+    </body></html>`);
+  } else if (url.pathname === '/storage-only') {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!DOCTYPE html><html><body>
+      <h1>Key only in storage</h1>
+      ${nav}
+      <script>try { localStorage.setItem('r', ${JSON.stringify(key)}); sessionStorage.setItem('r', ${JSON.stringify(key)}); } catch (e) {}</script>
+      <a href="https://apps.apple.com/app/id12345">App Store without key in href</a>
+    </body></html>`);
+  } else if (url.pathname === '/no-store') {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!DOCTYPE html><html><body>
+      <h1>No store links</h1>
+      ${nav}
+      <p>About page</p>
+    </body></html>`);
   } else if (url.pathname === '/no-key-link') {
-    // Tests S1 navigating without key, but the target page HAS the key? No, the mock is static, so if we click, we go to /stale-key without key.
-    res.end(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>No Key Link Page</title></head>
-      <body>
-        <h1>No Key Link</h1>
-        <!-- Link without key -->
-        <a href="/broken">Internal link without key</a>
-      </body>
-      </html>
-    `);
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!DOCTYPE html><html><body>
+      <h1>No Key Link</h1>
+      ${nav}
+      <a href="/broken">Internal link without key</a>
+    </body></html>`);
   } else if (url.pathname === '/stale-key') {
-    res.end(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Stale Key Page</title></head>
-      <body>
-        <h1>Stale Key</h1>
-        <a href="https://apps.apple.com/app/id12345?r=OLD_KEY_ABC">App Store</a>
-      </body>
-      </html>
-    `);
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!DOCTYPE html><html><body>
+      <h1>Stale Key</h1>
+      ${nav}
+      <a href="https://apps.apple.com/app/id12345?r=OLD_KEY_ABC">App Store</a>
+    </body></html>`);
   } else {
     res.writeHead(404);
     res.end('Not found');
   }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`Mock server running at http://localhost:${PORT}`);
 });

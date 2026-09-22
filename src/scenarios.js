@@ -1,156 +1,177 @@
-import { extractLinks, extractKeyFromUrl } from './extractor.js';
-import https from 'https';
-import http from 'http';
+import { extractLinks, extractKeyFromUrl, urlHasExactKey, firstKeyInChain, isStoreUrl } from './extractor.js';
+import { resolveRedirectChain } from './redirects.js';
 
-/**
- * Node-side fetch for HEAD requests to resolve redirects (like app.link, appsflyer, branch.io)
- * We don't want to use Playwright browser context for this to avoid noise and slow downs.
- */
-async function resolveOneHop(url) {
-  return new Promise((resolve) => {
-    const lib = url.startsWith('https') ? https : http;
-    const req = lib.request(url, { method: 'HEAD', timeout: 10000 }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        resolve(res.headers.location);
-      } else {
-        resolve(url);
-      }
-    });
-    req.on('error', () => resolve(url));
-    req.on('timeout', () => { req.destroy(); resolve(url); });
-    req.end();
-  });
+function scenarioTimeout() {
+  return process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS, 10) : 20000;
 }
 
-export async function resolveRedirect(url, maxHops = 5) {
-  let current = url;
-  for (let i = 0; i < maxHops; i++) {
-    const next = await resolveOneHop(current);
-    if (!next || next === current) return current;
-    current = next;
-  }
-  return current;
-}
-
-/**
- * Waits for store links up to 8s with rAF fallback, then extracts them.
- */
-async function waitAndExtractStoreLinks(page, rootDomain) {
+async function acceptCookies(page) {
   try {
-    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"], a[href*="appsflyer"], a[href*="branch.io"]', { timeout: 8000 });
-  } catch (err) {
-    // Fallback: wait 2 frames to let JS settle if selector missed
-    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
-  }
-  return await extractLinks(page, rootDomain);
+    const btn = page.locator('button:has-text("Accept"), button:has-text("Accept all"), button:has-text("Погоджуюсь"), button:has-text("Agree")').first();
+    if (await btn.isVisible({ timeout: 800 })) await btn.click({ timeout: 1000 });
+  } catch {}
 }
 
-/**
- * Evaluates store links on a page, checking if they contain the expected referral key.
- * Returns: { status, details, actualKey }
- */
-async function evaluateStoreLinks(page, expectedKey, rootDomain) {
-  const { stores } = await waitAndExtractStoreLinks(page, rootDomain);
-  if (stores.length === 0) return { status: 'NO_STORE_LINK', details: 'No store links found on page', actualKey: null };
-  
-  let allMatch = true;
-  let lastActual = null;
-  let details = [];
-
-  for (let store of stores) {
-    let finalUrl = store;
-    let note = '';
-    // Resolve redirects for tracking links
-    if (store.includes('app.link') || store.includes('appsflyer') || store.includes('branch.io')) {
-      const resolved = await resolveRedirect(store);
-      if (resolved !== store) {
-        finalUrl = resolved;
-        note = ` (resolved to ${finalUrl})`;
-      } else {
-        note = ` (HEAD resolve failed or no redirect)`;
-      }
-    }
-
-    const key = extractKeyFromUrl(finalUrl);
-    if (key !== expectedKey) {
-      allMatch = false;
-      details.push(`${store}${note} → key="${key}", expected="${expectedKey}"`);
-    }
-    lastActual = key;
-  }
-
-  if (allMatch) {
-    return { status: 'PASS', details: `All ${stores.length} store links contain the correct key`, actualKey: expectedKey };
-  } else {
-    return { status: 'FAIL_LOST', details: details.join('; '), actualKey: lastActual };
+async function waitForPageSettle(page) {
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+  try {
+    await page.waitForSelector(
+      'a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"], a[href*="onelink"], a[href*="appsflyer"], a[href*="branch.io"]',
+      { timeout: 6000 }
+    );
+  } catch {
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
   }
 }
 
 async function createContext(browser, deviceDesc) {
-  if (deviceDesc) {
-    return await browser.newContext({ ...deviceDesc });
-  }
-  return await browser.newContext();
+  const opts = { ignoreHTTPSErrors: true };
+  if (deviceDesc) Object.assign(opts, deviceDesc);
+  return await browser.newContext(opts);
 }
 
 async function captureScreenshot(page, path, status) {
-  if (path && (status.startsWith('FAIL') || status === 'INCONCLUSIVE')) {
-    try { await page.screenshot({ path, fullPage: true }); } catch {}
-  }
+  if (!path || !status) return;
+  if (!(status.startsWith('FAIL') || status === 'INCONCLUSIVE')) return;
+  try { await page.screenshot({ path, fullPage: true }); } catch {}
 }
 
-// S1: Navigate from root to target page by clicking a real link
+function classify(actualKey, expectedKey, staleKey = null) {
+  const actual = actualKey === '' ? null : actualKey;
+  const expected = expectedKey === '' ? null : expectedKey;
+  if (actual === expected) return 'PASS';
+  if (expected == null && actual != null) return 'FAIL_ALTERED';
+  if (staleKey && actual === staleKey) return 'FAIL_STALE';
+  if (actual == null) return 'FAIL_LOST';
+  return 'FAIL_ALTERED';
+}
+
+async function inspectStoreUrl(store, expectedKey) {
+  const hops = [store];
+  if (/app\.link|onelink|appsflyer|branch\.io/i.test(store)) {
+    const { chain } = await resolveRedirectChain(store);
+    for (const u of chain) {
+      if (!hops.includes(u)) hops.push(u);
+    }
+  }
+
+  let matched = false;
+  if (expectedKey) {
+    matched = hops.some(u => urlHasExactKey(u, expectedKey));
+  } else {
+    matched = hops.every(u => !extractKeyFromUrl(u));
+  }
+
+  const actualKey = expectedKey && matched ? expectedKey : firstKeyInChain(hops);
+  return { store, hops, matched, actualKey };
+}
+
+/**
+ * Read store hrefs as the site left them. Never writes `r=` onto those links.
+ */
+async function evaluateStoreLinks(page, expectedKey, rootDomain, staleKey = null) {
+  const { stores } = await extractLinks(page, rootDomain);
+  const extra = [];
+  try {
+    extra.push(...await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('a[href]')).map(a => a.href);
+    }));
+  } catch {}
+  const allStores = [...new Set([...stores, ...extra.filter(isStoreUrl)])];
+
+  if (allStores.length === 0) {
+    return { status: 'NO_STORE_LINK', details: 'No App Store / Google Play / smart-link found on page', actualKey: null };
+  }
+
+  const inspected = [];
+  for (const store of allStores) {
+    inspected.push(await inspectStoreUrl(store, expectedKey));
+  }
+
+  const detailsParts = inspected.map(i => {
+    const note = i.hops.length > 1 ? ` (chain: ${i.hops.join(' -> ')})` : '';
+    return `${i.store}${note} → key="${i.actualKey}", expected="${expectedKey}"`;
+  });
+
+  const allMatch = inspected.every(i => i.matched);
+  const lastActual = inspected.map(i => i.actualKey).find(Boolean) ?? null;
+
+  if (allMatch) {
+    return {
+      status: 'PASS',
+      details: `All ${inspected.length} store link(s) carry the expected key`,
+      actualKey: expectedKey ?? lastActual,
+    };
+  }
+
+  const status = classify(lastActual, expectedKey, staleKey);
+  return { status, details: detailsParts.join('; '), actualKey: lastActual };
+}
+
+async function clickInternalPath(page, context, targetPath) {
+  const found = await page.evaluate((path) => {
+    const want = path.replace(/\/$/, '') || '/';
+    const links = Array.from(document.querySelectorAll('a[href]'));
+    for (const a of links) {
+      try {
+        const u = new URL(a.href, location.href);
+        const p = u.pathname.replace(/\/$/, '') || '/';
+        if (p === want) {
+          a.setAttribute('data-monitor-click', '1');
+          return true;
+        }
+      } catch {}
+    }
+    return false;
+  }, targetPath);
+
+  if (!found) return { ok: false };
+
+  const timeout = scenarioTimeout();
+  const navPromise = page.waitForEvent('framenavigated', { timeout }).catch(() => null);
+  const popupPromise = context.waitForEvent('page', { timeout }).catch(() => null);
+  await page.locator('a[data-monitor-click="1"]').first().click({ timeout: 5000 });
+  const popup = await popupPromise;
+  await navPromise;
+  if (popup) {
+    await popup.waitForLoadState('domcontentloaded').catch(() => {});
+    return { ok: true, page: popup };
+  }
+  return { ok: true, page };
+}
+
+async function gotoKey(page, url, key) {
+  const u = new URL(url);
+  if (key != null) u.searchParams.set('r', key);
+  else u.searchParams.delete('r');
+  await page.goto(u.toString(), { waitUntil: 'domcontentloaded', timeout: scenarioTimeout() });
+  await waitForPageSettle(page);
+  await acceptCookies(page);
+}
+
+function rootDomainOf(url) {
+  return new URL(url).hostname;
+}
+
 export async function runS1(browser, rootUrl, targetUrl, key, deviceDesc = null, screenshotPath = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
   try {
-    const rootDomain = new URL(rootUrl).hostname;
-    await page.goto(`${rootUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    
     const targetPath = new URL(targetUrl).pathname;
-    
-    // Find a link that goes to targetPath
-    const linkHref = await page.evaluate((path) => {
-      const links = Array.from(document.querySelectorAll('a'));
-      for (const a of links) {
-        try {
-          const u = new URL(a.href);
-          if (u.pathname === path || u.pathname === path.replace(/\/$/, '') || u.pathname + '/' === path) {
-            return a.getAttribute('href');
-          }
-        } catch {}
-      }
-      return null;
-    }, targetPath);
-
-    if (!linkHref) {
-      return { status: 'NO_INTERNAL_LINK', details: `Could not find any link to ${targetPath} on root page`, actualKey: null };
+    const rootPath = new URL(rootUrl).pathname;
+    if ((targetPath.replace(/\/$/, '') || '/') === (rootPath.replace(/\/$/, '') || '/')) {
+      res = { status: 'NO_INTERNAL_LINK', details: 'S1 skipped: target is the landing page', actualKey: null };
+      return res;
     }
-
-    // Real click and wait for navigation
-    const navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 }).catch(e => e);
-    const popupPromise = context.waitForEvent('page', { timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 }).catch(() => null);
-    
-    await page.locator(`a[href="${linkHref}"]`).first().click();
-    
-    let newPage = page;
-    const navRes = await navPromise;
-    if (navRes instanceof Error) {
-      // maybe it opened in a popup
-      const popup = await popupPromise;
-      if (popup) {
-        newPage = popup;
-        await newPage.waitForLoadState('domcontentloaded');
-      } else {
-        return { status: 'INCONCLUSIVE', details: 'Click did not result in navigation or new tab', actualKey: null };
-      }
+    await gotoKey(page, rootUrl, key);
+    const clicked = await clickInternalPath(page, context, targetPath);
+    if (!clicked.ok) {
+      res = { status: 'NO_INTERNAL_LINK', details: `No on-page link from landing to ${targetPath}`, actualKey: null };
+      return res;
     }
-    
-    await newPage.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    
-    res = await evaluateStoreLinks(newPage, key, rootDomain);
+    await waitForPageSettle(clicked.page);
+    res = await evaluateStoreLinks(clicked.page, key, rootDomainOf(rootUrl));
   } catch (err) {
     res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
   } finally {
@@ -160,16 +181,13 @@ export async function runS1(browser, rootUrl, targetUrl, key, deviceDesc = null,
   return res;
 }
 
-// S2: Direct visit to page with ?r=KEY in URL
 export async function runS2(browser, targetUrl, key, deviceDesc = null, screenshotPath = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
   try {
-    const rootDomain = new URL(targetUrl).hostname;
-    await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    res = await evaluateStoreLinks(page, key, rootDomain);
+    await gotoKey(page, targetUrl, key);
+    res = await evaluateStoreLinks(page, key, rootDomainOf(targetUrl));
   } catch (err) {
     res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
   } finally {
@@ -179,18 +197,15 @@ export async function runS2(browser, targetUrl, key, deviceDesc = null, screensh
   return res;
 }
 
-// S3: Direct visit with ?r=KEY, then reload page (F5)
 export async function runS3(browser, targetUrl, key, deviceDesc = null, screenshotPath = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
   try {
-    const rootDomain = new URL(targetUrl).hostname;
-    await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    res = await evaluateStoreLinks(page, key, rootDomain);
+    await gotoKey(page, targetUrl, key);
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: scenarioTimeout() });
+    await waitForPageSettle(page);
+    res = await evaluateStoreLinks(page, key, rootDomainOf(targetUrl));
   } catch (err) {
     res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
   } finally {
@@ -200,62 +215,30 @@ export async function runS3(browser, targetUrl, key, deviceDesc = null, screensh
   return res;
 }
 
-// S4: Chain navigation
 export async function runS4(browser, rootUrl, intermediateUrl, targetUrl, key, deviceDesc = null, screenshotPath = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
   try {
-    const rootDomain = new URL(rootUrl).hostname;
-    
-    // Step 1
-    await page.goto(`${rootUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    
-    // Find intermediate
+    await gotoKey(page, rootUrl, key);
     const interPath = new URL(intermediateUrl).pathname;
-    const interHref = await page.evaluate((path) => {
-      const links = Array.from(document.querySelectorAll('a'));
-      for (const a of links) {
-        try {
-          const u = new URL(a.href);
-          if (u.pathname === path || u.pathname === path.replace(/\/$/, '')) return a.getAttribute('href');
-        } catch {}
-      }
-      return null;
-    }, interPath);
-
-    if (!interHref) return { status: 'STOP_CHAIN', details: `Step 1: No link to ${interPath}`, actualKey: null };
-
-    let navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 }).catch(() => {});
-    await page.locator(`a[href="${interHref}"]`).first().click();
-    await navPromise;
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-
-    // Find target
-    const targetPath = new URL(targetUrl).pathname;
-    const targetHref = await page.evaluate((path) => {
-      const links = Array.from(document.querySelectorAll('a'));
-      for (const a of links) {
-        try {
-          const u = new URL(a.href);
-          if (u.pathname === path || u.pathname === path.replace(/\/$/, '')) return a.getAttribute('href');
-        } catch {}
-      }
-      return null;
-    }, targetPath);
-
-    if (!targetHref) {
-      res = { status: 'STOP_CHAIN', details: `Step 2: No link to ${targetPath}`, actualKey: null };
+    const step1 = await clickInternalPath(page, context, interPath);
+    if (!step1.ok) {
+      res = { status: 'STOP_CHAIN', details: `Step 1: no link to ${interPath}`, actualKey: null };
       return res;
     }
+    let current = step1.page;
+    await waitForPageSettle(current);
 
-    navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 }).catch(() => {});
-    await page.locator(`a[href="${targetHref}"]`).first().click();
-    await navPromise;
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-
-    res = await evaluateStoreLinks(page, key, rootDomain);
+    const targetPath = new URL(targetUrl).pathname;
+    const step2 = await clickInternalPath(current, context, targetPath);
+    if (!step2.ok) {
+      res = { status: 'STOP_CHAIN', details: `Step 2: no link to ${targetPath}`, actualKey: null };
+      return res;
+    }
+    current = step2.page;
+    await waitForPageSettle(current);
+    res = await evaluateStoreLinks(current, key, rootDomainOf(rootUrl));
   } catch (err) {
     res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
   } finally {
@@ -265,23 +248,17 @@ export async function runS4(browser, rootUrl, intermediateUrl, targetUrl, key, d
   return res;
 }
 
-// S5: Replace key
 export async function runS5(browser, targetUrl, key1, key2, deviceDesc = null, screenshotPath = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
   try {
-    const rootDomain = new URL(targetUrl).hostname;
-    await page.goto(`${targetUrl}?r=${key1}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await page.goto(`${targetUrl}?r=${key2}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    res = await evaluateStoreLinks(page, key2, rootDomain);
+    await gotoKey(page, targetUrl, key1);
+    await gotoKey(page, targetUrl, key2);
+    res = await evaluateStoreLinks(page, key2, rootDomainOf(targetUrl), key1);
     if (res.status === 'FAIL_LOST' && res.actualKey === key1) {
       res.status = 'FAIL_STALE';
       res.details = `Old key "${key1}" still present after replacement with "${key2}"`;
-    } else if (res.status === 'FAIL_LOST' && res.actualKey !== key2) {
-      res.status = 'FAIL_ALTERED';
     }
   } catch (err) {
     res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
@@ -292,115 +269,26 @@ export async function runS5(browser, targetUrl, key1, key2, deviceDesc = null, s
   return res;
 }
 
-// S6: Control
 export async function runS6(browser, targetUrl, deviceDesc = null, screenshotPath = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
   try {
-    const rootDomain = new URL(targetUrl).hostname;
-    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    res = await evaluateStoreLinks(page, null, rootDomain);
-    if (res.status === 'FAIL_LOST') {
-      res.status = 'FAIL_ALTERED';
-      res.details = `Expected no key, but found key "${res.actualKey}" in store link`;
-    }
-  } catch (err) {
-    res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
-  } finally {
-    await captureScreenshot(page, screenshotPath, res.status);
-    await context.close();
-  }
-  return res;
-}
-
-// S7: Key with special characters
-export async function runS7(browser, targetUrl, deviceDesc = null, screenshotPath = null) {
-  const specialKey = 'T_E-S.T~K';
-  return await runS2(browser, targetUrl, specialKey, deviceDesc, screenshotPath);
-}
-
-// S8: UTM Parameters presence
-export async function runS8(browser, targetUrl, key, deviceDesc = null, screenshotPath = null) {
-  const context = await createContext(browser, deviceDesc);
-  const page = await context.newPage();
-  let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
-  try {
-    const rootDomain = new URL(targetUrl).hostname;
-    const urlObj = new URL(targetUrl);
-    urlObj.searchParams.set('utm_source', 'telegram');
-    urlObj.searchParams.set('utm_medium', 'cpc');
-    urlObj.searchParams.set('r', key);
-    
-    await page.goto(urlObj.toString(), { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    res = await evaluateStoreLinks(page, key, rootDomain);
-  } catch (err) {
-    res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
-  } finally {
-    await captureScreenshot(page, screenshotPath, res.status);
-    await context.close();
-  }
-  return res;
-}
-
-// S9: Edge case - extremely long key
-export async function runS9(browser, targetUrl, deviceDesc = null, screenshotPath = null) {
-  const longKey = 'LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890';
-  return await runS2(browser, targetUrl, longKey, deviceDesc, screenshotPath);
-}
-
-// S10: Form interaction on Exchange page
-export async function runS10(browser, targetUrl, key, deviceDesc = null, screenshotPath = null) {
-  let res = { status: 'INCONCLUSIVE', details: '', actualKey: null };
-  const context = await browser.newContext({ ...deviceDesc, ignoreHTTPSErrors: true });
-  const page = await context.newPage();
-
-  try {
-    const startUrl = targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'r=' + key;
-    await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-
-    // Try to find the exchange button by role and text (more robust than CSS classes)
-    let formBtn = page.getByRole('button', { name: /buy|exchange|обміняти|купити/i }).first();
-    
-    // Fallback to broader search if getByRole doesn't find it
-    if (await formBtn.count() === 0) {
-      formBtn = page.locator('button, a').filter({ hasText: /buy|exchange|обміняти|купити/i }).first();
-    }
-    
-    // If not found, skip (return NO_FORM since it's not applicable)
-    if (await formBtn.count() === 0) {
-      res = { status: 'NO_FORM', details: 'No exchange form found on this page (skipped)', actualKey: key };
-      return res;
-    }
-
-    // Accept cookies if present to prevent it from blocking the click
-    try {
-      const cookieBtn = page.locator('button:has-text("Accept all")').first();
-      if (await cookieBtn.isVisible({ timeout: 1000 })) {
-        await cookieBtn.click();
+    await gotoKey(page, targetUrl, null);
+    res = await evaluateStoreLinks(page, null, rootDomainOf(targetUrl));
+    if (res.status === 'FAIL_LOST' || (res.status !== 'NO_STORE_LINK' && res.status !== 'PASS' && res.actualKey)) {
+      if (res.status !== 'NO_STORE_LINK' && res.actualKey) {
+        res.status = 'FAIL_ALTERED';
+        res.details = `Expected no referral key, but store link has "${res.actualKey}"`;
       }
-    } catch {}
-
-    let navPromise = page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 }).catch(() => {});
-    await formBtn.click();
-    await navPromise;
-    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-
-    const rootDomain = new URL(startUrl).hostname;
-    res = await evaluateStoreLinks(page, key, rootDomain);
-    
-    if (res.status.startsWith('FAIL') || res.status === 'INCONCLUSIVE') {
-      res.expectedKey = key;
-      await captureScreenshot(page, screenshotPath, res.status);
     }
   } catch (err) {
-    res.details = err.message;
-    await captureScreenshot(page, screenshotPath, res.status);
+    res = { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
   } finally {
+    await captureScreenshot(page, screenshotPath, res.status);
     await context.close();
   }
   return res;
 }
+
+

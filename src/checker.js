@@ -1,44 +1,39 @@
 import 'dotenv/config';
 import { chromium, webkit, devices } from 'playwright';
-import { startRun, finishRun, savePage, saveCheck, incrementFailures, resetFailures } from './storage.js';
-import { extractLinks, extractKeyFromUrl } from './extractor.js';
-import { crawlSite } from './crawler.js';
-import { runS1, runS2, runS3, runS4, runS5, runS6, runS7, runS8, runS9, runS10 } from './scenarios.js';
+import {
+  startRun, finishRun, savePage, saveCheck, incrementFailures, resetFailures,
+  restoreConsecutiveFailures, getDb, saveCrawlError, setMonitorState,
+} from './storage.js';
+import { crawlSite, findTwoHopChain } from './crawler.js';
+import { runS1, runS2, runS3, runS4, runS5, runS6 } from './scenarios.js';
 import { notifyStart, notifySuccess, notifyFailure } from './notifier.js';
+import { generateReport } from './reporter.js';
 import fs from 'fs';
 import path from 'path';
 
-// Ensure screenshots directory is clean
 const SCREENSHOTS_DIR = path.join(process.cwd(), 'screenshots');
 if (fs.existsSync(SCREENSHOTS_DIR)) {
   fs.rmSync(SCREENSHOTS_DIR, { recursive: true, force: true });
 }
 fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
-const DEVICE_PROFILES = [
-  {
-    name: 'desktop',
-    engine: 'chromium',
-    desc: devices['Desktop Chrome']
-  },
-  {
-    name: 'desktop_mac',
-    engine: 'webkit',
-    desc: devices['Desktop Safari']
-  },
-  { 
-    name: 'mobile_ios', 
-    engine: 'webkit',
-    desc: devices['iPhone 13'] 
-  },
-  { 
-    name: 'mobile_android', 
-    engine: 'chromium',
-    desc: devices['Pixel 5'] 
-  },
+const ALL_DEVICE_PROFILES = [
+  { name: 'desktop', engine: 'chromium', desc: devices['Desktop Chrome'] },
+  { name: 'mobile_ios', engine: 'webkit', desc: devices['iPhone 13'] },
+  { name: 'mobile_android', engine: 'chromium', desc: devices['Pixel 5'] },
 ];
 
-// ─── Healthchecks.io ping ────────────────────────────────────────────────────
+const isTest = process.env.NODE_ENV === 'test';
+const fullScenarios = isTest || process.env.FULL_SCENARIOS === '1';
+const DEVICE_PROFILES = isTest
+  ? ALL_DEVICE_PROFILES.filter(d => d.name === 'desktop')
+  : ALL_DEVICE_PROFILES;
+
+const DEFAULT_KEY = 'WoEs9XIVB6b';
+const OLD_KEY = 'OLD_KEY_ABC';
+const LONG_KEY = 'LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890';
+const SKIPPED = new Set(['NO_STORE_LINK', 'NO_INTERNAL_LINK', 'STOP_CHAIN', 'NO_FORM']);
+
 async function hcPing(suffix = '') {
   const base = process.env.HEALTHCHECK_URL;
   if (!base) return;
@@ -48,7 +43,18 @@ async function hcPing(suffix = '') {
   } catch {}
 }
 
-async function runWithConcurrency(tasks, limit = 6) {
+function restoreHealthFromDisk() {
+  const statusPath = path.join(process.cwd(), 'status.json');
+  if (!fs.existsSync(statusPath)) return;
+  try {
+    const prev = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+    if (typeof prev.consecutive_failures === 'number') {
+      restoreConsecutiveFailures(prev.consecutive_failures);
+    }
+  } catch {}
+}
+
+async function runWithConcurrency(tasks, limit = 4) {
   const results = [];
   const executing = new Set();
   for (const task of tasks) {
@@ -60,10 +66,9 @@ async function runWithConcurrency(tasks, limit = 6) {
   return Promise.all(results);
 }
 
-// Wrapper to handle retries for INCONCLUSIVE
 async function runWithRetry(fn, maxTries = 2) {
   let res;
-  let allDetails = [];
+  const allDetails = [];
   for (let i = 0; i < maxTries; i++) {
     res = await fn();
     if (res.status !== 'INCONCLUSIVE') return res;
@@ -73,88 +78,119 @@ async function runWithRetry(fn, maxTries = 2) {
   return res;
 }
 
+function isDeepPage(url, rootUrl) {
+  try {
+    const p = new URL(url).pathname.replace(/\/$/, '') || '/';
+    const root = new URL(rootUrl).pathname.replace(/\/$/, '') || '/';
+    return p === root || /exchange/i.test(p);
+  } catch {
+    return false;
+  }
+}
+
+function planForPage(url, rootUrl, pages, edges, device) {
+  const jobs = [];
+  const onlyDesktop = device.name === 'desktop';
+  const deep = isDeepPage(url, rootUrl);
+
+  jobs.push({ id: 'S2', expected: DEFAULT_KEY, run: (br, sp) => runS2(br, url, DEFAULT_KEY, device.desc, sp) });
+
+  if (fullScenarios || onlyDesktop) {
+    jobs.push({ id: 'S1', expected: DEFAULT_KEY, run: (br, sp) => runS1(br, rootUrl, url, DEFAULT_KEY, device.desc, sp) });
+    jobs.push({ id: 'S3', expected: DEFAULT_KEY, run: (br, sp) => runS3(br, url, DEFAULT_KEY, device.desc, sp) });
+    jobs.push({ id: 'S5', expected: DEFAULT_KEY, run: (br, sp) => runS5(br, url, OLD_KEY, DEFAULT_KEY, device.desc, sp) });
+    jobs.push({ id: 'S6', expected: null, run: (br, sp) => runS6(br, url, device.desc, sp) });
+  }
+
+
+
+  if (fullScenarios || onlyDesktop) {
+    const chain = findTwoHopChain(rootUrl, url, edges);
+    const idx = pages.indexOf(url);
+    const fallbackNext = pages[(idx + 1) % Math.max(pages.length, 1)] || url;
+    const mid = chain?.intermediate || url;
+    const dest = chain?.target || fallbackNext;
+    jobs.push({ id: 'S4', expected: DEFAULT_KEY, run: (br, sp) => runS4(br, rootUrl, mid, dest, DEFAULT_KEY, device.desc, sp) });
+  }
+
+  return jobs;
+}
+
 async function main() {
-  const watchdog = setTimeout(async () => {
-    console.error('🚨 Global timeout reached (40m). Force killing process to prevent zombie run.');
-    finishRun(runId, 'FAILED');
-    incrementFailures();
-    await hcPing('/fail');
-    process.exit(1);
-  }, 40 * 60 * 1000);
-
-  const rootUrl = (process.env.TARGET_URL || 'https://trustee.io').trim();
-  const defaultKey = 'WoEs9XIVB6b';
-  const maxPages = parseInt(process.env.CRAWLER_MAX_PAGES || '300', 10);
-  const maxDepth = parseInt(process.env.CRAWLER_MAX_DEPTH || '10', 10);
-  const delayMs = parseInt(process.env.CRAWLER_DELAY_MS || '500', 10);
-
-  await hcPing('/start');
+  restoreHealthFromDisk();
 
   let runId = null;
   let runFailed = false;
 
+  const watchdogMs = parseInt(process.env.WATCHDOG_MS || String(4 * 60 * 60 * 1000), 10);
+  const watchdog = setTimeout(async () => {
+    console.error('Global timeout reached. Stopping the run.');
+    if (runId) {
+      finishRun(runId, 'FAILED');
+      incrementFailures();
+    }
+    await hcPing('/fail');
+    process.exit(1);
+  }, watchdogMs);
+
+  const rootUrl = (process.env.TARGET_URL || 'https://trustee.io').trim();
+  const maxPages = parseInt(process.env.CRAWLER_MAX_PAGES || '400', 10);
+  const maxDepth = parseInt(process.env.CRAWLER_MAX_DEPTH || '10', 10);
+  const delayMs = parseInt(process.env.CRAWLER_DELAY_MS || '400', 10);
+
+  await hcPing('/start');
+
   const browsers = {
     chromium: await chromium.launch({ headless: true }),
-    webkit: await webkit.launch({ headless: true })
+    webkit: isTest ? null : await webkit.launch({ headless: true }),
   };
 
   try {
     runId = startRun();
     console.log(`--- Starting Run #${runId} ---`);
 
-    const { foundUrls: pages, failedUrls, truncatedUrls } = await crawlSite(browsers.chromium, rootUrl, maxPages, maxDepth, delayMs);
-    
-    const dbModule = await import('./storage.js');
-    for (const failed of failedUrls) {
-      dbModule.saveCrawlError(runId, failed.url, failed.reason);
-    }
-    if (truncatedUrls) {
-      for (const trunc of truncatedUrls) {
-        dbModule.saveCrawlError(runId, trunc.url, 'TRUNCATED: ' + trunc.reason);
-      }
-    }
+    const { foundUrls: pages, failedUrls, truncatedUrls, edges, sitemapCount } = await crawlSite(
+      browsers.chromium, rootUrl, maxPages, maxDepth, delayMs
+    );
 
-    const totalChecks = pages.length * 10 * DEVICE_PROFILES.length;
-    console.log(`\nFound ${pages.length} pages × 10 scenarios × ${DEVICE_PROFILES.length} devices = ${totalChecks} checks`);
-    console.log(`Failed to crawl ${failedUrls.length} pages (saved to crawl_errors).`);
-    console.log(`Running with parallelism (up to 6 concurrent)...\n`);
+    for (const failed of failedUrls) saveCrawlError(runId, failed.url, failed.reason);
+    for (const trunc of truncatedUrls) saveCrawlError(runId, trunc.url, 'TRUNCATED: ' + trunc.reason);
 
+    setMonitorState('last_coverage', JSON.stringify({
+      pages: pages.length,
+      sitemap: sitemapCount,
+      crawl_errors: failedUrls.length,
+      truncated: truncatedUrls.length,
+      edges: edges.length,
+    }));
+
+    console.log(`\nCoverage: ${pages.length} pages, sitemap seeds ${sitemapCount}, ${failedUrls.length} crawl errors, ${truncatedUrls.length} truncated`);
     await notifyStart(runId, pages.length);
 
     for (let i = 0; i < pages.length; i++) {
       const url = pages[i];
       const pageId = savePage(runId, url);
-      const nextPage = pages[(i + 1) % pages.length];
-
       console.log(`Testing ${url}...`);
 
       const tasks = [];
       for (const device of DEVICE_PROFILES) {
         const br = browsers[device.engine];
-        
-        const createScenTask = (scenarioName, expectedKey, runFunc) => async () => {
-          const screenshotPath = path.join(SCREENSHOTS_DIR, `${runId}_${pageId}_${scenarioName}.png`);
-          const res = await runWithRetry(() => runFunc(screenshotPath));
-          return { id: scenarioName, expected: expectedKey, screenshotPath, ...res };
-        };
-
-        tasks.push(createScenTask(`S1_${device.name}`, defaultKey, (sp) => runS1(br, rootUrl, url, defaultKey, device.desc, sp)));
-        tasks.push(createScenTask(`S2_${device.name}`, defaultKey, (sp) => runS2(br, url, defaultKey, device.desc, sp)));
-        tasks.push(createScenTask(`S3_${device.name}`, defaultKey, (sp) => runS3(br, url, defaultKey, device.desc, sp)));
-        tasks.push(createScenTask(`S4_${device.name}`, defaultKey, (sp) => runS4(br, rootUrl, url, nextPage, defaultKey, device.desc, sp)));
-        tasks.push(createScenTask(`S5_${device.name}`, defaultKey, (sp) => runS5(br, url, 'OLD_KEY_ABC', defaultKey, device.desc, sp)));
-        tasks.push(createScenTask(`S6_${device.name}`, null, (sp) => runS6(br, url, device.desc, sp)));
-        tasks.push(createScenTask(`S7_${device.name}`, 'T_E-S.T~K', (sp) => runS7(br, url, device.desc, sp)));
-        tasks.push(createScenTask(`S8_${device.name}`, defaultKey, (sp) => runS8(br, url, defaultKey, device.desc, sp)));
-        tasks.push(createScenTask(`S9_${device.name}`, 'LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890', (sp) => runS9(br, url, device.desc, sp)));
-        tasks.push(createScenTask(`S10_${device.name}`, defaultKey, (sp) => runS10(br, url, defaultKey, device.desc, sp)));
+        if (!br) continue;
+        const jobs = planForPage(url, rootUrl, pages, edges, device);
+        for (const job of jobs) {
+          tasks.push(async () => {
+            const screenshotPath = path.join(SCREENSHOTS_DIR, `${runId}_${pageId}_${job.id}_${device.name}.png`);
+            const res = await runWithRetry(() => job.run(br, screenshotPath));
+            return { id: `${job.id}_${device.name}`, expected: job.expected, screenshotPath, ...res };
+          });
+        }
       }
 
-      const results = await runWithConcurrency(tasks, 6);
+      const results = await runWithConcurrency(tasks, parseInt(process.env.CONCURRENCY || '4', 10));
       for (const r of results) {
-        const finalScreenshot = (r.status.startsWith('FAIL') || r.status === 'INCONCLUSIVE') ? r.screenshotPath : null;
-        saveCheck(runId, pageId, r.id, r.expected, r.actualKey, r.status, r.details, finalScreenshot);
-        const icon = r.status === 'PASS' ? '✓' : ['NO_STORE_LINK', 'NO_INTERNAL_LINK', 'STOP_CHAIN'].includes(r.status) ? '○' : '✗';
+        const shot = (r.status.startsWith('FAIL') || r.status === 'INCONCLUSIVE') ? r.screenshotPath : null;
+        saveCheck(runId, pageId, r.id, r.expected, r.actualKey, r.status, r.details, shot);
+        const icon = r.status === 'PASS' ? '✓' : SKIPPED.has(r.status) ? '○' : '✗';
         console.log(`  ${icon} ${r.id}: ${r.status}`);
       }
     }
@@ -163,17 +199,20 @@ async function main() {
     resetFailures();
     await hcPing();
 
-    const db = (await import('./storage.js')).getDb();
+    const db = getDb();
     const checks = db.prepare(`SELECT status, scenario FROM checks WHERE run_id = ?`).all(runId);
     const pass = checks.filter(c => c.status === 'PASS').length;
     const fail = checks.filter(c => c.status.startsWith('FAIL')).length;
-    const noLink = checks.filter(c => ['NO_STORE_LINK', 'NO_INTERNAL_LINK', 'STOP_CHAIN'].includes(c.status)).length;
+    const skipped = checks.filter(c => SKIPPED.has(c.status)).length;
     const incon = checks.filter(c => c.status === 'INCONCLUSIVE').length;
     const dFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop')).length;
     const mFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop_mac')).length;
     const iFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_ios')).length;
     const aFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_android')).length;
-    await notifySuccess(runId, { pass, fail, noStoreLink: noLink, inconclusive: incon, pages: pages.length, desktopFail: dFail, macFail: mFail, iosFail: iFail, androidFail: aFail });
+    await notifySuccess(runId, {
+      pass, fail, noStoreLink: skipped, inconclusive: incon, pages: pages.length,
+      desktopFail: dFail, macFail: mFail, iosFail: iFail, androidFail: aFail,
+    });
 
     console.log(`\n--- Run #${runId} Completed ---`);
   } catch (err) {
@@ -185,8 +224,9 @@ async function main() {
     await hcPing('/fail');
   } finally {
     clearTimeout(watchdog);
-    await browsers.chromium.close();
-    await browsers.webkit.close();
+    try { await browsers.chromium.close(); } catch {}
+    try { if (browsers.webkit) await browsers.webkit.close(); } catch {}
+    try { generateReport(); } catch (e) { console.error('Report generation failed:', e.message); }
   }
 
   process.exit(runFailed ? 1 : 0);

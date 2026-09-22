@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync as Database } from 'node:sqlite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -13,7 +13,7 @@ export function initDB() {
   if (db) return db;
   
   db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
+  db.exec('PRAGMA journal_mode = WAL;');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS runs (
@@ -124,4 +124,17 @@ export function incrementFailures() {
 export function resetFailures() {
   const db = initDB();
   db.prepare(`UPDATE monitor_state SET value = '0' WHERE key = 'consecutive_failures'`).run();
+}
+
+export function setMonitorState(key, value) {
+  const db = initDB();
+  db.prepare(`
+    INSERT INTO monitor_state (key, value) VALUES (?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run(key, String(value));
+}
+
+export function restoreConsecutiveFailures(n) {
+  const db = initDB();
+  db.prepare(`UPDATE monitor_state SET value = ? WHERE key = 'consecutive_failures'`).run(String(n));
 }

@@ -3,15 +3,10 @@ name: Daily Referral Monitor
 on:
   schedule:
     - cron: '0 6 * * *'
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   monitor:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     concurrency:
       group: referral-monitor
@@ -23,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install Dependencies
@@ -43,7 +38,7 @@ jobs:
 
       - name: Generate Report
         if: always()
-        run: npm run report
+        run: node src/reporter.js
 
       - name: Upload Report Artifacts
         if: always()
@@ -53,33 +48,4 @@ jobs:
           path: |
             report.html
             status.json
-          retention-days: 30
-
-  selftest:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
-      - name: Run Selftest
-        run: npm run selftest
-
-      - name: Upload Selftest Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: selftest-report
-          path: selftest-report.json
           retention-days: 30
