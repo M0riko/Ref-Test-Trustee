@@ -105,15 +105,15 @@ async function runWithConcurrency(tasks, limit = 6) {
 }
 
 async function main() {
-  // Global watchdog timeout: 40 minutes (prevents the script from hanging forever)
+  // Global watchdog timeout: 4 hours (prevents the script from hanging forever)
   const watchdog = setTimeout(() => {
-    console.error('🚨 Global timeout reached (40m). Force killing process to prevent zombie run.');
+    console.error('🚨 Global timeout reached (4h). Force killing process to prevent zombie run.');
     process.exit(1);
-  }, 40 * 60 * 1000);
+  }, 4 * 60 * 60 * 1000);
 
   const rootUrl = (process.env.TARGET_URL || 'https://trustee.io').trim();
   const defaultKey = 'WoEs9XIVB6b';
-  const maxPages = parseInt(process.env.CRAWLER_MAX_PAGES || '300', 10);
+  const maxPages = parseInt(process.env.CRAWLER_MAX_PAGES || process.env.MAX_PAGES || '300', 10);
   const maxDepth = parseInt(process.env.CRAWLER_MAX_DEPTH || '10', 10);
   const delayMs = parseInt(process.env.CRAWLER_DELAY_MS || '500', 10);
 
@@ -139,7 +139,7 @@ async function main() {
     const totalChecks = pages.length * 9 * DEVICE_PROFILES.length;
     console.log(`\nFound ${pages.length} pages × 9 scenarios × ${DEVICE_PROFILES.length} devices = ${totalChecks} checks`);
     console.log(`Failed to crawl ${failedUrls.length} pages (saved to crawl_errors).`);
-    console.log(`Running with parallelism (up to 6 concurrent)...\n`);
+    console.log(`Running with parallelism (up to 12 concurrent)...\n`);
 
     // Telegram: notify run started
     await notifyStart(runId, pages.length);
@@ -164,7 +164,7 @@ async function main() {
         tasks.push(() => runS9(browser, url, device.desc).then(r => ({ id: `S9_${device.name}`, expected: 'LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890', ...r })));
       }
 
-      const results = await runWithConcurrency(tasks, 6);
+      const results = await runWithConcurrency(tasks, 12);
       for (const r of results) {
         saveCheck(runId, pageId, r.id, r.expected, r.actualKey, r.status, r.details);
         const icon = r.status === 'PASS' ? '✓' : r.status === 'NO_STORE_LINK' ? '○' : '✗';
