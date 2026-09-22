@@ -50,6 +50,15 @@ export function initDB() {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS crawl_errors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id INTEGER NOT NULL,
+      url TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (run_id) REFERENCES runs(id)
+    );
+
     INSERT OR IGNORE INTO monitor_state (key, value) VALUES ('consecutive_failures', '0');
   `);
   
@@ -83,6 +92,15 @@ export function saveCheck(runId, pageId, scenario, expectedKey, actualKey, statu
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `);
   stmt.run(runId, pageId, scenario, expectedKey, actualKey, status, details, screenshotPath);
+}
+
+export function saveCrawlError(runId, url, reason) {
+  const db = initDB();
+  const stmt = db.prepare(`
+    INSERT INTO crawl_errors (run_id, url, reason, created_at)
+    VALUES (?, ?, ?, datetime('now'))
+  `);
+  stmt.run(runId, url, reason);
 }
 
 export function getDb() {

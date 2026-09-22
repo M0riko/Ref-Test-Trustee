@@ -51,7 +51,8 @@ export async function runS1(browser, rootUrl, targetUrl, key, deviceDesc = null)
   try {
     // Step 1: Land on root with referral key
     await page.goto(`${rootUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(2000); // let site JS run and modify links
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
 
     // Step 2: Find the link to targetUrl that site JS should have modified
     const targetPath = new URL(targetUrl).pathname;
@@ -76,7 +77,8 @@ export async function runS1(browser, rootUrl, targetUrl, key, deviceDesc = null)
       // This is less realistic but ensures we still test the page
       await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
     }
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
 
     return await evaluateStoreLinks(page, key);
   } catch (err) {
@@ -92,7 +94,8 @@ export async function runS2(browser, targetUrl, key, deviceDesc = null) {
   const page = await context.newPage();
   try {
     await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     return await evaluateStoreLinks(page, key);
   } catch (err) {
     return { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
@@ -107,9 +110,10 @@ export async function runS3(browser, targetUrl, key, deviceDesc = null) {
   const page = await context.newPage();
   try {
     await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     return await evaluateStoreLinks(page, key);
   } catch (err) {
     return { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
@@ -125,9 +129,10 @@ export async function runS5(browser, targetUrl, key1, key2, deviceDesc = null) {
   const page = await context.newPage();
   try {
     await page.goto(`${targetUrl}?r=${key1}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.goto(`${targetUrl}?r=${key2}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     const res = await evaluateStoreLinks(page, key2);
     if (res.status === 'FAIL_LOST' && res.actualKey === key1) {
       res.status = 'FAIL_STALE';
@@ -150,7 +155,8 @@ export async function runS6(browser, targetUrl, deviceDesc = null) {
   const page = await context.newPage();
   try {
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     const res = await evaluateStoreLinks(page, null);
     if (res.status === 'FAIL_LOST') {
       // We expected null key but found something — that's unexpected
@@ -184,7 +190,8 @@ export async function runS8(browser, targetUrl, key, deviceDesc = null) {
     urlObj.searchParams.set('r', key);
     
     await page.goto(urlObj.toString(), { waitUntil: 'domcontentloaded', timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     return await evaluateStoreLinks(page, key);
   } catch (err) {
     return { status: 'INCONCLUSIVE', details: err.message, actualKey: null };

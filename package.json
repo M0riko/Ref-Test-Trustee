@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/checker.js && node src/reporter.js",
     "start:mock": "node src/mock-server.js",
-    "test:mock": "set TARGET_URL=http://localhost:3000 && set MAX_PAGES=2 && npm start"
+    "test:mock": "set TARGET_URL=http://localhost:3000&& set MAX_PAGES=2&& npm start"
   },
   "keywords": [],
   "author": "",

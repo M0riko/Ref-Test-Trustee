@@ -6,7 +6,7 @@ export async function extractLinks(page) {
     const internal = [...new Set(allLinks.filter(href => {
       try {
         const url = new URL(href);
-        return url.hostname.includes('trustee.io') || url.hostname.includes('trusteeglobal.eu');
+        return url.hostname === 'trustee.io' || url.hostname.endsWith('.trustee.io');
       } catch {
         return false;
       }

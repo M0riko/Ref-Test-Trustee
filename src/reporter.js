@@ -38,6 +38,7 @@ export function generateReport() {
   `).all(run.id);
 
   const pages = db.prepare(`SELECT * FROM pages WHERE run_id = ?`).all(run.id);
+  const crawlErrors = db.prepare(`SELECT * FROM crawl_errors WHERE run_id = ?`).all(run.id);
   const consecutiveFailures = getConsecutiveFailures();
 
   // Global stats
@@ -155,6 +156,38 @@ export function generateReport() {
         </thead>
         <tbody>
           ${tbody}
+        </tbody>
+      </table>
+    </div>
+    `;
+  }
+
+  // Add Crawl Errors block if any exist
+  if (crawlErrors && crawlErrors.length > 0) {
+    let errorRows = crawlErrors.map(e => `
+      <tr>
+        <td style="text-align: left; padding-left: 24px;"><a href="${e.url}" target="_blank" style="color: #f87171;">${e.url}</a></td>
+        <td style="color: #94a3b8; text-align: left;">${(e.reason || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+      </tr>
+    `).join('');
+    
+    pagesHtml += `
+    <div class="page-card" style="border-color: #7f1d1d;">
+      <div class="page-header" style="background: #450a0a;">
+        <h3 style="color: #fca5a5;">⚠️ Не вдалося перевірити (${crawlErrors.length} сторінок)</h3>
+      </div>
+      <div style="padding: 16px 24px; font-size: 0.9em; color: #fecaca; background: #2b0504;">
+        Ці сторінки були знайдені, але їх не вдалося завантажити для перевірки (Timeout, 500 тощо).
+      </div>
+      <table class="matrix-table">
+        <thead>
+          <tr>
+            <th width="40%">URL</th>
+            <th width="60%">Причина помилки</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${errorRows}
         </tbody>
       </table>
     </div>
