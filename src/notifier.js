@@ -65,7 +65,8 @@ export async function notifySuccess(runId, stats) {
     `  ○ No store link: <b>${stats.noStoreLink}</b>\n` +
     `  ? Inconclusive: <b>${stats.inconclusive}</b>\n` +
     `  📄 Pages crawled: <b>${stats.pages}</b>\n\n` +
-    `🖥️ Desktop FAIL: <b>${stats.desktopFail}</b>\n` +
+    `🖥️ Win FAIL: <b>${stats.desktopFail}</b>\n` +
+    `💻 Mac FAIL: <b>${stats.macFail}</b>\n` +
     `📱 iOS FAIL: <b>${stats.iosFail}</b>\n` +
     `🤖 Android FAIL: <b>${stats.androidFail}</b>\n\n` +
     `⏱ <i>${new Date().toISOString()}</i>`

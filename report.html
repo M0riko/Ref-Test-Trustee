@@ -36,20 +36,109 @@
 </head>
 <body>
   <h1>🔍 Trustee Referral Monitor</h1>
-  <p class="subtitle">Run #3 | Started: 2026-09-22 16:14:15 UTC | Status: COMPLETED</p>
+  <p class="subtitle">Run #6 | Started: 2026-09-22 16:26:57 UTC | Status: COMPLETED</p>
   <span class="health-badge">✅ Monitor healthy | Last run succeeded</span>
 
   <div class="card summary">
-    <div class="stat stat-total"><small>Total checks</small><strong>27</strong></div>
+    <div class="stat stat-total"><small>Total checks</small><strong>36</strong></div>
     <div class="stat" style="border-color:#475569"><small>Pages crawled</small><strong style="color:#e2e8f0">1</strong></div>
-    <div class="stat stat-pass"><small>PASS</small><strong>18</strong></div>
-    <div class="stat stat-fail"><small>FAIL</small><strong>3</strong></div>
+    <div class="stat stat-pass"><small>PASS</small><strong>24</strong></div>
+    <div class="stat stat-fail"><small>FAIL</small><strong>4</strong></div>
     <div class="stat stat-nolink"><small>No store link</small><strong>0</strong></div>
-    <div class="stat stat-inconclusive"><small>Inconclusive</small><strong>6</strong></div>
+    <div class="stat stat-inconclusive"><small>Inconclusive</small><strong>8</strong></div>
   </div>
 
   
-  <h2><span class="device-badge badge-desktop">🖥️ Desktop</span> Desktop (9 checks)</h2>
+  <h2><span class="device-badge badge-desktop">🖥️ Win</span> Desktop (Windows) (9 checks)</h2>
+  <div class="card summary" style="margin-bottom:14px">
+    <div class="stat stat-pass"><small>PASS</small><strong>6</strong></div>
+    <div class="stat stat-fail"><small>FAIL</small><strong>1</strong></div>
+    <div class="stat stat-nolink"><small>No link</small><strong>0</strong></div>
+    <div class="stat stat-inconclusive"><small>Inconclusive</small><strong>2</strong></div>
+  </div>
+  <table>
+    <thead><tr><th>Page</th><th>Scenario</th><th>Status</th><th>Expected</th><th>Actual</th><th>Details</th></tr></thead>
+    <tbody><tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-INCONCLUSIVE">INCONCLUSIVE</td>
+        <td>WoEs9XIVB6b</td>
+        <td>—</td>
+        <td class="details">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">All 1 store links contain the correct key</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">All 1 store links contain the correct key</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S4</strong></td>
+        <td class="status-INCONCLUSIVE">INCONCLUSIVE</td>
+        <td>WoEs9XIVB6b</td>
+        <td>—</td>
+        <td class="details">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">All 1 store links contain the correct key</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>—</td>
+        <td>—</td>
+        <td class="details">Expected no key, but found key "" in store link</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>T_E-S.T~K</td>
+        <td>T_E-S.T~K</td>
+        <td class="details">All 1 store links contain the correct key</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S8</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">All 1 store links contain the correct key</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td><strong>S9</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890</td>
+        <td>LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890</td>
+        <td class="details">All 1 store links contain the correct key</td>
+      </tr></tbody>
+  </table>
+  
+  <h2><span class="device-badge badge-desktop">💻 Mac</span> Desktop (Mac M1/M2) (9 checks)</h2>
   <div class="card summary" style="margin-bottom:14px">
     <div class="stat stat-pass"><small>PASS</small><strong>6</strong></div>
     <div class="stat stat-fail"><small>FAIL</small><strong>1</strong></div>
@@ -316,7 +405,7 @@ Call log:
       </tr></tbody>
   </table>
   
-  <h2 class="inconclusive-title">⚠️ Could Not Verify (6 checks — NOT counted as success)</h2>
+  <h2 class="inconclusive-title">⚠️ Could Not Verify (8 checks — NOT counted as success)</h2>
   <div class="card inconclusive-card">
     <p>These checks could not be completed due to technical issues (timeout, network error, CAPTCHA, DNS).
     They are listed separately and are <strong>not counted as PASS</strong>.</p>
@@ -326,6 +415,15 @@ Call log:
     <tbody><tr>
         <td><a href="http://localhost:3000/" target="_blank">/</a></td>
         <td>🖥️ <strong>S1</strong></td>
+        <td class="status-INCONCLUSIVE">INCONCLUSIVE</td>
+        <td class="details">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td>💻 <strong>S1</strong></td>
         <td class="status-INCONCLUSIVE">INCONCLUSIVE</td>
         <td class="details">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
 Call log:
@@ -361,6 +459,15 @@ Call log:
       </tr>
 <tr>
         <td><a href="http://localhost:3000/" target="_blank">/</a></td>
+        <td>💻 <strong>S4</strong></td>
+        <td class="status-INCONCLUSIVE">INCONCLUSIVE</td>
+        <td class="details">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</td>
+      </tr>
+<tr>
+        <td><a href="http://localhost:3000/" target="_blank">/</a></td>
         <td>🤖 <strong>S4</strong></td>
         <td class="status-INCONCLUSIVE">INCONCLUSIVE</td>
         <td class="details">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
@@ -379,6 +486,6 @@ Call log:
       </tr></tbody>
   </table>
 
-  <footer>Generated by Trustee Referral Monitor | 2026-09-22T16:14:27.435Z</footer>
+  <footer>Generated by Trustee Referral Monitor | 2026-09-22T16:27:11.709Z</footer>
 </body>
 </html>

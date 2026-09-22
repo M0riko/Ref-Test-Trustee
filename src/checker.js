@@ -15,6 +15,13 @@ const DEVICE_PROFILES = [
       viewport: { width: 1920, height: 1080 }
     } 
   },
+  {
+    name: 'desktop_mac',
+    desc: {
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+      viewport: { width: 1440, height: 900 }
+    }
+  },
   { name: 'mobile_ios', desc: devices['iPhone 13'] },
   { name: 'mobile_android', desc: devices['Pixel 5'] },
 ];
@@ -167,10 +174,11 @@ async function main() {
     const fail    = checks.filter(c => c.status.startsWith('FAIL')).length;
     const noLink  = checks.filter(c => c.status === 'NO_STORE_LINK').length;
     const incon   = checks.filter(c => c.status === 'INCONCLUSIVE').length;
-    const dFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.includes('_desktop')).length;
-    const iFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.includes('_mobile_ios')).length;
-    const aFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.includes('_mobile_android')).length;
-    await notifySuccess(runId, { pass, fail, noStoreLink: noLink, inconclusive: incon, pages: pages.length, desktopFail: dFail, iosFail: iFail, androidFail: aFail });
+    const dFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop')).length;
+    const mFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop_mac')).length;
+    const iFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_ios')).length;
+    const aFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_android')).length;
+    await notifySuccess(runId, { pass, fail, noStoreLink: noLink, inconclusive: incon, pages: pages.length, desktopFail: dFail, macFail: mFail, iosFail: iFail, androidFail: aFail });
 
     console.log(`\n--- Run #${runId} Completed ---`);
   } catch (err) {

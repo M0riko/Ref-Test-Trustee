@@ -39,16 +39,17 @@ function generateReport() {
   });
 
   // Split by device
-  const desktopChecks  = checks.filter(c => c.scenario.includes('_desktop'));
-  const iosChecks      = checks.filter(c => c.scenario.includes('_mobile_ios'));
-  const androidChecks  = checks.filter(c => c.scenario.includes('_mobile_android'));
+  const desktopChecks  = checks.filter(c => c.scenario.endsWith('_desktop'));
+  const macChecks      = checks.filter(c => c.scenario.endsWith('_desktop_mac'));
+  const iosChecks      = checks.filter(c => c.scenario.endsWith('_mobile_ios'));
+  const androidChecks  = checks.filter(c => c.scenario.endsWith('_mobile_android'));
   const inconclusive   = checks.filter(c => c.status === 'INCONCLUSIVE');
 
   function buildRows(list) {
     if (!list.length) return '<tr><td colspan="6" style="text-align:center;color:#64748b">— No checks —</td></tr>';
     return list.map(c => {
       let cls = c.status.startsWith('FAIL') ? 'status-FAIL' : `status-${c.status}`;
-      let sc = c.scenario.replace(/_desktop$/, '').replace(/_mobile_ios$/, '').replace(/_mobile_android$/, '');
+      let sc = c.scenario.replace(/_desktop$/, '').replace(/_desktop_mac$/, '').replace(/_mobile_ios$/, '').replace(/_mobile_android$/, '');
       return `<tr>
         <td><a href="${c.url}" target="_blank">${new URL(c.url).pathname}</a></td>
         <td><strong>${sc}</strong></td>
@@ -72,6 +73,7 @@ function generateReport() {
   }
 
   const dS = calcStats(desktopChecks);
+  const mS = calcStats(macChecks);
   const iS = calcStats(iosChecks);
   const aS = calcStats(androidChecks);
 
@@ -95,8 +97,8 @@ function generateReport() {
   function inconclusiveSection(list) {
     if (!list.length) return '';
     const rows = list.map(c => {
-      let sc = c.scenario.replace(/_desktop$/, '').replace(/_mobile_ios$/, '').replace(/_mobile_android$/, '');
-      let device = c.scenario.includes('_desktop') ? '🖥️' : c.scenario.includes('_mobile_ios') ? '📱' : '🤖';
+      let sc = c.scenario.replace(/_desktop$/, '').replace(/_desktop_mac$/, '').replace(/_mobile_ios$/, '').replace(/_mobile_android$/, '');
+      let device = c.scenario.endsWith('_desktop') ? '🖥️' : c.scenario.endsWith('_desktop_mac') ? '💻' : c.scenario.endsWith('_mobile_ios') ? '📱' : '🤖';
       return `<tr>
         <td><a href="${c.url}" target="_blank">${new URL(c.url).pathname}</a></td>
         <td>${device} <strong>${sc}</strong></td>
@@ -172,7 +174,8 @@ function generateReport() {
     <div class="stat stat-inconclusive"><small>Inconclusive</small><strong>${stats.INCONCLUSIVE}</strong></div>
   </div>
 
-  ${section('Desktop', '🖥️ Desktop', 'badge-desktop', desktopChecks, dS)}
+  ${section('Desktop (Windows)', '🖥️ Win', 'badge-desktop', desktopChecks, dS)}
+  ${section('Desktop (Mac M1/M2)', '💻 Mac', 'badge-desktop', macChecks, mS)}
   ${section('Mobile — iOS (iPhone 13)', '📱 iOS', 'badge-ios', iosChecks, iS)}
   ${section('Mobile — Android (Pixel 5)', '🤖 Android', 'badge-android', androidChecks, aS)}
   ${inconclusiveSection(inconclusive)}
@@ -199,6 +202,7 @@ function generateReport() {
     overall: stats.FAIL > 0 ? 'FAIL' : (stats.INCONCLUSIVE === stats.total ? 'INCONCLUSIVE' : 'PASS'),
     consecutive_failures: consecutiveFailures,   // ← key field for monitoring
     desktop: dS,
+    desktop_mac: mS,
     mobile_ios: iS,
     mobile_android: aS,
     generated_at: new Date().toISOString()
