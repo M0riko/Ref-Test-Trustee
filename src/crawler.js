@@ -26,6 +26,11 @@ export async function crawlSite(browser, startUrl, maxPages = 5) {
       if (IGNORED_EXTENSIONS.some(ext => u.pathname.toLowerCase().endsWith(ext))) {
         continue;
       }
+      
+      // Ignore specific domains/subdomains that shouldn't be tested
+      if (u.hostname === 'travel.trusteeglobal.eu') {
+        continue;
+      }
 
       u.hash = '';
       
