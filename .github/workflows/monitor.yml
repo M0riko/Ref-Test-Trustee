@@ -1,0 +1,46 @@
+name: Daily Referral Monitor
+
+on:
+  schedule:
+    # Run automatically every day at 03:00 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Trustee Monitor
+        run: npm start
+        env:
+          MAX_PAGES: 15 # Adjust to scan more pages if needed
+
+      - name: Upload Report and Status
+        uses: actions/upload-artifact@v3
+        with:
+          name: monitor-results
+          path: |
+            report.html
+            status.json
+
+      - name: Check Status and Fail Workflow if Needed
+        run: |
+          STATUS=$(cat status.json | jq -r '.overall')
+          if [ "$STATUS" = "FAIL" ]; then
+            echo "Monitor detected lost referral keys!"
+            exit 1
+          fi

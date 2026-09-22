@@ -1,5 +1,5 @@
 import { chromium, devices } from 'playwright';
-import { startRun, finishRun, savePage, saveCheck } from './storage.js';
+import { startRun, finishRun, savePage, saveCheck, getConsecutiveFailures, incrementFailures, resetFailures } from './storage.js';
 import { extractLinks, extractKeyFromUrl } from './extractor.js';
 import { crawlSite } from './crawler.js';
 import { runS1, runS2, runS3, runS5, runS6, runS7 } from './scenarios.js';
@@ -15,6 +15,22 @@ const DEVICE_PROFILES = [
   { name: 'mobile_ios', desc: devices['iPhone 13'] },
   { name: 'mobile_android', desc: devices['Pixel 5'] },
 ];
+
+// ─── Healthchecks.io ping ────────────────────────────────────────────────────
+// Set HEALTHCHECK_URL in .env or GitHub Action secrets to enable.
+// Format: https://hc-ping.com/<uuid>
+// On start → ping /start   (lets HC.io know a run started)
+// On success → ping /       (confirms run completed successfully)
+// On failure → ping /fail   (alerts if run crashed)
+async function hcPing(suffix = '') {
+  const base = process.env.HEALTHCHECK_URL;
+  if (!base) return; // silently skip if not configured
+  const url = base.replace(/\/$/, '') + suffix;
+  try {
+    // Use built-in fetch (Node 18+)
+    await fetch(url, { method: 'POST', signal: AbortSignal.timeout(5000) });
+  } catch { /* non-fatal — don't crash the monitor over a ping */ }
+}
 
 // S4: Chain navigation — root → pageA → pageB
 async function runS4(browser, rootUrl, pageA, pageB, key, deviceDesc) {
@@ -73,31 +89,31 @@ async function runWithConcurrency(tasks, limit = 6) {
     const p = task().then(r => { executing.delete(p); return r; });
     executing.add(p);
     results.push(p);
-    if (executing.size >= limit) {
-      await Promise.race(executing);
-    }
+    if (executing.size >= limit) await Promise.race(executing);
   }
   return Promise.all(results);
 }
 
 async function main() {
-  const rootUrl = 'https://trustee.io';
+  const rootUrl = process.env.TARGET_URL || 'https://trustee.io';
   const defaultKey = 'WoEs9XIVB6b';
   const maxPages = parseInt(process.env.MAX_PAGES || '15', 10);
+
+  // Notify healthcheck service that a run has started
+  await hcPing('/start');
 
   const runId = startRun();
   console.log(`--- Starting Run #${runId} ---`);
 
   const browser = await chromium.launch({ headless: true });
+  let runFailed = false;
 
   try {
-    // 1. Crawl to discover pages
     const pages = await crawlSite(browser, rootUrl, maxPages);
     const totalChecks = pages.length * 7 * DEVICE_PROFILES.length;
     console.log(`\nFound ${pages.length} pages × 7 scenarios × ${DEVICE_PROFILES.length} devices = ${totalChecks} checks`);
     console.log(`Running with parallelism (up to 6 concurrent)...\n`);
 
-    // 2. For each page, run ALL device+scenario combos in parallel
     for (let i = 0; i < pages.length; i++) {
       const url = pages[i];
       const pageId = savePage(runId, url);
@@ -107,33 +123,16 @@ async function main() {
 
       const tasks = [];
       for (const device of DEVICE_PROFILES) {
-        // S1
-        tasks.push(() => runS1(browser, rootUrl, url, defaultKey, device.desc)
-          .then(r => ({ id: `S1_${device.name}`, expected: defaultKey, ...r })));
-        // S2
-        tasks.push(() => runS2(browser, url, defaultKey, device.desc)
-          .then(r => ({ id: `S2_${device.name}`, expected: defaultKey, ...r })));
-        // S3
-        tasks.push(() => runS3(browser, url, defaultKey, device.desc)
-          .then(r => ({ id: `S3_${device.name}`, expected: defaultKey, ...r })));
-        // S4
-        tasks.push(() => runS4(browser, rootUrl, url, nextPage, defaultKey, device.desc)
-          .then(r => ({ id: `S4_${device.name}`, expected: defaultKey, ...r })));
-        // S5
-        tasks.push(() => runS5(browser, url, 'OLD_KEY_ABC', defaultKey, device.desc)
-          .then(r => ({ id: `S5_${device.name}`, expected: defaultKey, ...r })));
-        // S6
-        tasks.push(() => runS6(browser, url, device.desc)
-          .then(r => ({ id: `S6_${device.name}`, expected: null, ...r })));
-        // S7
-        tasks.push(() => runS7(browser, url, device.desc)
-          .then(r => ({ id: `S7_${device.name}`, expected: 'T_E-S.T~K', ...r })));
+        tasks.push(() => runS1(browser, rootUrl, url, defaultKey, device.desc).then(r => ({ id: `S1_${device.name}`, expected: defaultKey, ...r })));
+        tasks.push(() => runS2(browser, url, defaultKey, device.desc).then(r => ({ id: `S2_${device.name}`, expected: defaultKey, ...r })));
+        tasks.push(() => runS3(browser, url, defaultKey, device.desc).then(r => ({ id: `S3_${device.name}`, expected: defaultKey, ...r })));
+        tasks.push(() => runS4(browser, rootUrl, url, nextPage, defaultKey, device.desc).then(r => ({ id: `S4_${device.name}`, expected: defaultKey, ...r })));
+        tasks.push(() => runS5(browser, url, 'OLD_KEY_ABC', defaultKey, device.desc).then(r => ({ id: `S5_${device.name}`, expected: defaultKey, ...r })));
+        tasks.push(() => runS6(browser, url, device.desc).then(r => ({ id: `S6_${device.name}`, expected: null, ...r })));
+        tasks.push(() => runS7(browser, url, device.desc).then(r => ({ id: `S7_${device.name}`, expected: 'T_E-S.T~K', ...r })));
       }
 
-      // Run all 21 checks for this page in parallel (up to 6 at a time)
       const results = await runWithConcurrency(tasks, 6);
-
-      // Save results and log
       for (const r of results) {
         saveCheck(runId, pageId, r.id, r.expected, r.actualKey, r.status, r.details);
         const icon = r.status === 'PASS' ? '✓' : r.status === 'NO_STORE_LINK' ? '○' : '✗';
@@ -142,13 +141,25 @@ async function main() {
     }
 
     finishRun(runId, 'COMPLETED');
+    resetFailures();             // reset consecutive failure counter on success
+    await hcPing();              // ✅ ping success
     console.log(`\n--- Run #${runId} Completed ---`);
   } catch (err) {
     console.error(`Run failed:`, err);
+    runFailed = true;
     finishRun(runId, 'FAILED');
+    incrementFailures();         // track consecutive failures
+    await hcPing('/fail');       // ❌ ping failure
   } finally {
     await browser.close();
   }
+
+  process.exit(runFailed ? 1 : 0);
 }
 
-main().catch(console.error);
+main().catch(async (err) => {
+  console.error(err);
+  incrementFailures();
+  await hcPing('/fail');
+  process.exit(1);
+});

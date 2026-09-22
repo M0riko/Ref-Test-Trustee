@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getConsecutiveFailures } from './storage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,9 @@ function generateReport() {
     WHERE c.run_id = ? ORDER BY p.url, c.scenario
   `).all(run.id);
 
+  const pages = db.prepare(`SELECT * FROM pages WHERE run_id = ?`).all(run.id);
+  const consecutiveFailures = getConsecutiveFailures();
+
   // Global stats
   const stats = { PASS: 0, FAIL: 0, NO_STORE_LINK: 0, INCONCLUSIVE: 0, total: checks.length };
   checks.forEach(c => {
@@ -35,11 +39,13 @@ function generateReport() {
   });
 
   // Split by device
-  const desktopChecks = checks.filter(c => c.scenario.includes('_desktop'));
-  const iosChecks = checks.filter(c => c.scenario.includes('_mobile_ios'));
-  const androidChecks = checks.filter(c => c.scenario.includes('_mobile_android'));
+  const desktopChecks  = checks.filter(c => c.scenario.includes('_desktop'));
+  const iosChecks      = checks.filter(c => c.scenario.includes('_mobile_ios'));
+  const androidChecks  = checks.filter(c => c.scenario.includes('_mobile_android'));
+  const inconclusive   = checks.filter(c => c.status === 'INCONCLUSIVE');
 
   function buildRows(list) {
+    if (!list.length) return '<tr><td colspan="6" style="text-align:center;color:#64748b">— No checks —</td></tr>';
     return list.map(c => {
       let cls = c.status.startsWith('FAIL') ? 'status-FAIL' : `status-${c.status}`;
       let sc = c.scenario.replace(/_desktop$/, '').replace(/_mobile_ios$/, '').replace(/_mobile_android$/, '');
@@ -85,6 +91,37 @@ function generateReport() {
   </table>`;
   }
 
+  // ── INCONCLUSIVE section ── (separate block as required by TZ)
+  function inconclusiveSection(list) {
+    if (!list.length) return '';
+    const rows = list.map(c => {
+      let sc = c.scenario.replace(/_desktop$/, '').replace(/_mobile_ios$/, '').replace(/_mobile_android$/, '');
+      let device = c.scenario.includes('_desktop') ? '🖥️' : c.scenario.includes('_mobile_ios') ? '📱' : '🤖';
+      return `<tr>
+        <td><a href="${c.url}" target="_blank">${new URL(c.url).pathname}</a></td>
+        <td>${device} <strong>${sc}</strong></td>
+        <td class="status-INCONCLUSIVE">INCONCLUSIVE</td>
+        <td class="details">${c.details || 'Unknown error'}</td>
+      </tr>`;
+    }).join('\n');
+    return `
+  <h2 class="inconclusive-title">⚠️ Could Not Verify (${list.length} checks — NOT counted as success)</h2>
+  <div class="card inconclusive-card">
+    <p>These checks could not be completed due to technical issues (timeout, network error, CAPTCHA, DNS).
+    They are listed separately and are <strong>not counted as PASS</strong>.</p>
+  </div>
+  <table>
+    <thead><tr><th>Page</th><th>Scenario</th><th>Status</th><th>Reason</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+  }
+
+  // ── Monitor health badge ──
+  const healthColor = consecutiveFailures === 0 ? '#34d399' : consecutiveFailures < 3 ? '#fbbf24' : '#f87171';
+  const healthLabel = consecutiveFailures === 0
+    ? '✅ Monitor healthy'
+    : `⚠️ ${consecutiveFailures} consecutive failure${consecutiveFailures > 1 ? 's' : ''}`;
+
   const html = `<!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -95,8 +132,11 @@ function generateReport() {
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#0f172a;color:#e2e8f0;margin:0;padding:20px 30px}
     h1{color:#f1f5f9;font-size:1.8em;margin-bottom:5px}
     h2{color:#94a3b8;font-size:1.3em;margin-top:30px;border-bottom:1px solid #334155;padding-bottom:8px}
+    .inconclusive-title{color:#fbbf24;border-color:#78350f}
     .subtitle{color:#64748b;font-size:.95em;margin-bottom:20px}
+    .health-badge{display:inline-block;padding:4px 14px;border-radius:14px;font-size:.85em;font-weight:600;background:#1e293b;border:1px solid #334155;margin-bottom:16px;color:${healthColor}}
     .card{background:#1e293b;border-radius:10px;padding:18px 22px;box-shadow:0 2px 8px rgba(0,0,0,.3);margin-bottom:20px}
+    .inconclusive-card{border-left:3px solid #fbbf24}
     .summary{display:flex;gap:14px;flex-wrap:wrap}
     .stat{background:#0f172a;padding:14px;border-radius:8px;flex:1;min-width:120px;text-align:center;border:1px solid #334155}
     .stat strong{display:block;font-size:28px;margin-top:4px}
@@ -121,16 +161,22 @@ function generateReport() {
 <body>
   <h1>🔍 Trustee Referral Monitor</h1>
   <p class="subtitle">Run #${run.id} | Started: ${run.started_at} UTC | Status: ${run.status}</p>
+  <span class="health-badge">${healthLabel} | ${consecutiveFailures === 0 ? 'Last run succeeded' : `${consecutiveFailures} run(s) failed in a row`}</span>
+
   <div class="card summary">
     <div class="stat stat-total"><small>Total checks</small><strong>${stats.total}</strong></div>
+    <div class="stat" style="border-color:#475569"><small>Pages crawled</small><strong style="color:#e2e8f0">${pages.length}</strong></div>
     <div class="stat stat-pass"><small>PASS</small><strong>${stats.PASS}</strong></div>
     <div class="stat stat-fail"><small>FAIL</small><strong>${stats.FAIL}</strong></div>
     <div class="stat stat-nolink"><small>No store link</small><strong>${stats.NO_STORE_LINK}</strong></div>
     <div class="stat stat-inconclusive"><small>Inconclusive</small><strong>${stats.INCONCLUSIVE}</strong></div>
   </div>
+
   ${section('Desktop', '🖥️ Desktop', 'badge-desktop', desktopChecks, dS)}
   ${section('Mobile — iOS (iPhone 13)', '📱 iOS', 'badge-ios', iosChecks, iS)}
   ${section('Mobile — Android (Pixel 5)', '🤖 Android', 'badge-android', androidChecks, aS)}
+  ${inconclusiveSection(inconclusive)}
+
   <footer>Generated by Trustee Referral Monitor | ${new Date().toISOString()}</footer>
 </body>
 </html>`;
@@ -138,13 +184,23 @@ function generateReport() {
   fs.writeFileSync(reportPath, html);
   console.log('HTML report generated:', reportPath);
 
-  // status.json for monitoring
+  // ── status.json — machine-readable monitor health ──────────────────────────
   const statusData = {
-    run_id: run.id, started_at: run.started_at, finished_at: run.finished_at,
-    run_status: run.status, total_checks: stats.total,
-    pass: stats.PASS, fail: stats.FAIL, no_store_link: stats.NO_STORE_LINK, inconclusive: stats.INCONCLUSIVE,
-    overall: stats.FAIL > 0 ? 'FAIL' : (stats.INCONCLUSIVE > 0 ? 'WARN' : 'PASS'),
-    desktop: dS, mobile_ios: iS, mobile_android: aS,
+    run_id: run.id,
+    started_at: run.started_at,
+    finished_at: run.finished_at,
+    run_status: run.status,
+    total_checks: stats.total,
+    pages_crawled: pages.length,
+    pass: stats.PASS,
+    fail: stats.FAIL,
+    no_store_link: stats.NO_STORE_LINK,
+    inconclusive: stats.INCONCLUSIVE,
+    overall: stats.FAIL > 0 ? 'FAIL' : (stats.INCONCLUSIVE === stats.total ? 'INCONCLUSIVE' : 'PASS'),
+    consecutive_failures: consecutiveFailures,   // ← key field for monitoring
+    desktop: dS,
+    mobile_ios: iS,
+    mobile_android: aS,
     generated_at: new Date().toISOString()
   };
   fs.writeFileSync(statusPath, JSON.stringify(statusData, null, 2));

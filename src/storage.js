@@ -44,6 +44,13 @@ export function initDB() {
       FOREIGN KEY (run_id) REFERENCES runs(id),
       FOREIGN KEY (page_id) REFERENCES pages(id)
     );
+
+    CREATE TABLE IF NOT EXISTS monitor_state (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
+    INSERT OR IGNORE INTO monitor_state (key, value) VALUES ('consecutive_failures', '0');
   `);
   
   return db;
@@ -80,4 +87,22 @@ export function saveCheck(runId, pageId, scenario, expectedKey, actualKey, statu
 
 export function getDb() {
   return initDB();
+}
+
+// ─── Consecutive failure tracking ──────────────────────────────────────────
+export function getConsecutiveFailures() {
+  const db = initDB();
+  const row = db.prepare(`SELECT value FROM monitor_state WHERE key = 'consecutive_failures'`).get();
+  return row ? parseInt(row.value, 10) : 0;
+}
+
+export function incrementFailures() {
+  const db = initDB();
+  const current = getConsecutiveFailures();
+  db.prepare(`UPDATE monitor_state SET value = ? WHERE key = 'consecutive_failures'`).run(String(current + 1));
+}
+
+export function resetFailures() {
+  const db = initDB();
+  db.prepare(`UPDATE monitor_state SET value = '0' WHERE key = 'consecutive_failures'`).run();
 }
