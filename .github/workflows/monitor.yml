@@ -38,12 +38,7 @@ jobs:
           name: monitor-results
           path: |
             report.html
-            report.md
             status.json
-            junit.xml
-
-      - name: Publish Step Summary
-        run: cat report.md >> $GITHUB_STEP_SUMMARY
 
       - name: Check Status and Fail Workflow if Needed
         run: |
