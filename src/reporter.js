@@ -209,6 +209,64 @@ function generateReport() {
   };
   fs.writeFileSync(statusPath, JSON.stringify(statusData, null, 2));
   console.log('Status JSON generated:', statusPath);
+
+  // ── report.md — GitHub Actions Step Summary ──────────────────────────────────
+  const mdPath = path.join(__dirname, '..', 'report.md');
+  const md = `# 🔍 Trustee Referral Monitor Report\n\n` +
+    `**Status**: ${run.status} | **Overall**: ${statusData.overall}\n\n` +
+    `### Summary\n` +
+    `- **Pages Crawled**: ${pages.length}\n` +
+    `- **Total Checks**: ${stats.total}\n` +
+    `- ✅ **PASS**: ${stats.PASS}\n` +
+    `- ❌ **FAIL**: ${stats.FAIL}\n` +
+    `- ⚪ **No Store Link**: ${stats.NO_STORE_LINK}\n` +
+    `- ⚠️ **Inconclusive**: ${stats.INCONCLUSIVE}\n\n` +
+    `### Device Breakdown\n` +
+    `| Device | PASS | FAIL | No Link |\n` +
+    `|--------|------|------|---------|\n` +
+    `| 🖥️ Win Desktop | ${dS.PASS} | ${dS.FAIL} | ${dS.NO_STORE_LINK} |\n` +
+    `| 💻 Mac Desktop | ${mS.PASS} | ${mS.FAIL} | ${mS.NO_STORE_LINK} |\n` +
+    `| 📱 iOS | ${iS.PASS} | ${iS.FAIL} | ${iS.NO_STORE_LINK} |\n` +
+    `| 🤖 Android | ${aS.PASS} | ${aS.FAIL} | ${aS.NO_STORE_LINK} |\n\n` +
+    `> **Note**: For full details, download \`report.html\` from artifacts or check the Telegram alert.`;
+  fs.writeFileSync(mdPath, md);
+  console.log('Markdown report generated:', mdPath);
+
+  // ── junit.xml — CI/CD Test Annotations ──────────────────────────────────────
+  const junitPath = path.join(__dirname, '..', 'junit.xml');
+  let junitXml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  junitXml += `<testsuites name="Referral Monitor" tests="${stats.total}" failures="${stats.FAIL}">\n`;
+  
+  // Group checks by page
+  const pagesGroup = {};
+  checks.forEach(c => {
+    if (!pagesGroup[c.url]) pagesGroup[c.url] = [];
+    pagesGroup[c.url].push(c);
+  });
+
+  for (const [url, pageChecks] of Object.entries(pagesGroup)) {
+    const pageFails = pageChecks.filter(c => c.status.startsWith('FAIL')).length;
+    // Escape URL for XML attribute
+    const escapedUrl = url.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const pathName = new URL(url).pathname;
+    junitXml += `  <testsuite name="${escapedUrl}" tests="${pageChecks.length}" failures="${pageFails}">\n`;
+    pageChecks.forEach(c => {
+      junitXml += `    <testcase name="${c.scenario}" classname="${pathName}">\n`;
+      if (c.status.startsWith('FAIL')) {
+        junitXml += `      <failure message="${c.status}">${c.details ? c.details.replace(/&/g, '&amp;').replace(/</g, '&lt;') : ''}</failure>\n`;
+      } else if (c.status === 'INCONCLUSIVE') {
+        junitXml += `      <error message="${c.status}">${c.details ? c.details.replace(/&/g, '&amp;').replace(/</g, '&lt;') : ''}</error>\n`;
+      } else if (c.status === 'NO_STORE_LINK') {
+        junitXml += `      <skipped message="No store link"/>\n`;
+      }
+      junitXml += `    </testcase>\n`;
+    });
+    junitXml += `  </testsuite>\n`;
+  }
+  junitXml += `</testsuites>`;
+  
+  fs.writeFileSync(junitPath, junitXml);
+  console.log('JUnit XML generated:', junitPath);
 }
 
 generateReport();

@@ -8,12 +8,12 @@ import { notifyStart, notifySuccess, notifyFailure } from './notifier.js';
 
 
 const DEVICE_PROFILES = [
-  { 
-    name: 'desktop', 
+  {
+    name: 'desktop',
     desc: {
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       viewport: { width: 1920, height: 1080 }
-    } 
+    }
   },
   {
     name: 'desktop_mac',
@@ -53,7 +53,7 @@ async function runS4(browser, rootUrl, pageA, pageB, key, deviceDesc) {
     const pathA = new URL(pageA).pathname;
     const hrefA = await page.evaluate((path) => {
       for (const a of document.querySelectorAll('a')) {
-        try { const u = new URL(a.href); if (u.pathname === path || u.pathname + '/' === path || u.pathname === path.replace(/\/$/, '')) return a.href; } catch {}
+        try { const u = new URL(a.href); if (u.pathname === path || u.pathname + '/' === path || u.pathname === path.replace(/\/$/, '')) return a.href; } catch { }
       }
       return null;
     }, pathA);
@@ -64,7 +64,7 @@ async function runS4(browser, rootUrl, pageA, pageB, key, deviceDesc) {
     const pathB = new URL(pageB).pathname;
     const hrefB = await page.evaluate((path) => {
       for (const a of document.querySelectorAll('a')) {
-        try { const u = new URL(a.href); if (u.pathname === path || u.pathname + '/' === path || u.pathname === path.replace(/\/$/, '')) return a.href; } catch {}
+        try { const u = new URL(a.href); if (u.pathname === path || u.pathname + '/' === path || u.pathname === path.replace(/\/$/, '')) return a.href; } catch { }
       }
       return null;
     }, pathB);
@@ -170,14 +170,14 @@ async function main() {
     const allChecks = pages.flatMap(() => []);
     const db = (await import('./storage.js')).getDb();
     const checks = db.prepare(`SELECT status, scenario FROM checks WHERE run_id = ?`).all(runId);
-    const pass    = checks.filter(c => c.status === 'PASS').length;
-    const fail    = checks.filter(c => c.status.startsWith('FAIL')).length;
-    const noLink  = checks.filter(c => c.status === 'NO_STORE_LINK').length;
-    const incon   = checks.filter(c => c.status === 'INCONCLUSIVE').length;
-    const dFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop')).length;
-    const mFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop_mac')).length;
-    const iFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_ios')).length;
-    const aFail   = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_android')).length;
+    const pass = checks.filter(c => c.status === 'PASS').length;
+    const fail = checks.filter(c => c.status.startsWith('FAIL')).length;
+    const noLink = checks.filter(c => c.status === 'NO_STORE_LINK').length;
+    const incon = checks.filter(c => c.status === 'INCONCLUSIVE').length;
+    const dFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop')).length;
+    const mFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_desktop_mac')).length;
+    const iFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_ios')).length;
+    const aFail = checks.filter(c => c.status.startsWith('FAIL') && c.scenario.endsWith('_mobile_android')).length;
     await notifySuccess(runId, { pass, fail, noStoreLink: noLink, inconclusive: incon, pages: pages.length, desktopFail: dFail, macFail: mFail, iosFail: iFail, androidFail: aFail });
 
     console.log(`\n--- Run #${runId} Completed ---`);

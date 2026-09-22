@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Referral Monitor" tests="36" failures="4">
+  <testsuite name="http://localhost:3000/" tests="36" failures="4">
+    <testcase name="S1_desktop" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S1_desktop_mac" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S1_mobile_android" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S1_mobile_ios" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S2_desktop" classname="/">
+    </testcase>
+    <testcase name="S2_desktop_mac" classname="/">
+    </testcase>
+    <testcase name="S2_mobile_android" classname="/">
+    </testcase>
+    <testcase name="S2_mobile_ios" classname="/">
+    </testcase>
+    <testcase name="S3_desktop" classname="/">
+    </testcase>
+    <testcase name="S3_desktop_mac" classname="/">
+    </testcase>
+    <testcase name="S3_mobile_android" classname="/">
+    </testcase>
+    <testcase name="S3_mobile_ios" classname="/">
+    </testcase>
+    <testcase name="S4_desktop" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S4_desktop_mac" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S4_mobile_android" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S4_mobile_ios" classname="/">
+      <error message="INCONCLUSIVE">page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+[2m  - navigating to "http://localhost:3000 ?r=WoEs9XIVB6b", waiting until "domcontentloaded"[22m
+</error>
+    </testcase>
+    <testcase name="S5_desktop" classname="/">
+    </testcase>
+    <testcase name="S5_desktop_mac" classname="/">
+    </testcase>
+    <testcase name="S5_mobile_android" classname="/">
+    </testcase>
+    <testcase name="S5_mobile_ios" classname="/">
+    </testcase>
+    <testcase name="S6_desktop" classname="/">
+      <failure message="FAIL_ALTERED">Expected no key, but found key "" in store link</failure>
+    </testcase>
+    <testcase name="S6_desktop_mac" classname="/">
+      <failure message="FAIL_ALTERED">Expected no key, but found key "" in store link</failure>
+    </testcase>
+    <testcase name="S6_mobile_android" classname="/">
+      <failure message="FAIL_ALTERED">Expected no key, but found key "" in store link</failure>
+    </testcase>
+    <testcase name="S6_mobile_ios" classname="/">
+      <failure message="FAIL_ALTERED">Expected no key, but found key "" in store link</failure>
+    </testcase>
+    <testcase name="S7_desktop" classname="/">
+    </testcase>
+    <testcase name="S7_desktop_mac" classname="/">
+    </testcase>
+    <testcase name="S7_mobile_android" classname="/">
+    </testcase>
+    <testcase name="S7_mobile_ios" classname="/">
+    </testcase>
+    <testcase name="S8_desktop" classname="/">
+    </testcase>
+    <testcase name="S8_desktop_mac" classname="/">
+    </testcase>
+    <testcase name="S8_mobile_android" classname="/">
+    </testcase>
+    <testcase name="S8_mobile_ios" classname="/">
+    </testcase>
+    <testcase name="S9_desktop" classname="/">
+    </testcase>
+    <testcase name="S9_desktop_mac" classname="/">
+    </testcase>
+    <testcase name="S9_mobile_android" classname="/">
+    </testcase>
+    <testcase name="S9_mobile_ios" classname="/">
+    </testcase>
+  </testsuite>
+</testsuites>
