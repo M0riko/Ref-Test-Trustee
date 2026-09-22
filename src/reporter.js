@@ -43,10 +43,11 @@ export function generateReport() {
 
   // Global stats
   const stats = { PASS: 0, FAIL: 0, NO_STORE_LINK: 0, INCONCLUSIVE: 0, total: checks.length };
+  const inapplicables = ['NO_STORE_LINK', 'NO_INTERNAL_LINK', 'STOP_CHAIN', 'NO_FORM'];
   checks.forEach(c => {
     if (c.status === 'PASS') stats.PASS++;
     else if (c.status.startsWith('FAIL')) stats.FAIL++;
-    else if (c.status === 'NO_STORE_LINK') stats.NO_STORE_LINK++;
+    else if (inapplicables.includes(c.status)) stats.NO_STORE_LINK++;
     else stats.INCONCLUSIVE++;
   });
 
@@ -71,15 +72,15 @@ export function generateReport() {
   function renderStatusCell(c) {
     if (!c) return '<td class="cell-empty">—</td>';
     let cls = c.status.startsWith('FAIL') ? 'status-FAIL' : `status-${c.status}`;
-    let icon = c.status === 'PASS' ? '✅' : c.status.startsWith('FAIL') ? '❌' : c.status === 'NO_STORE_LINK' ? '⚪' : '⚠️';
+    let icon = c.status === 'PASS' ? '✅' : c.status.startsWith('FAIL') ? '❌' : inapplicables.includes(c.status) ? '⚪' : '⚠️';
     let text = c.status.startsWith('FAIL') ? 'FAIL' : c.status;
     
     // Create a CSS tooltip for errors
     let details = '';
-    if (c.status.startsWith('FAIL') || c.status === 'INCONCLUSIVE') {
-      // Escape HTML in details
+    if (c.status.startsWith('FAIL') || c.status === 'INCONCLUSIVE' || inapplicables.includes(c.status)) {
       let safeDetails = (c.details || 'No details provided').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      details = `<div class="tooltip">${safeDetails}<br><br><b>Expected:</b> ${c.expected_key || '—'}<br><b>Actual:</b> ${c.actual_key || '—'}</div>`;
+      let screenLink = c.screenshot_path ? `<br><br><a href="${c.screenshot_path}" target="_blank" style="color: #60a5fa; text-decoration: underline;">📸 View Screenshot</a>` : '';
+      details = `<div class="tooltip">${safeDetails}<br><br><b>Expected:</b> ${c.expected_key || '—'}<br><b>Actual:</b> ${c.actual_key || '—'}${screenLink}</div>`;
       cls += ' has-tooltip';
     }
     
@@ -111,7 +112,8 @@ export function generateReport() {
       'S6': 'Контроль (захід без ключа)',
       'S7': 'Ключ зі спецсимволами',
       'S8': 'Виживання з UTM-мітками',
-      'S9': 'Екстремально довгий ключ'
+      'S9': 'Екстремально довгий ключ',
+      'S10': 'Взаємодія з формою обміну (Exchange) — специфічно для сторінок з кнопкою купівлі/обміну'
     };
 
     let tbody = '';
@@ -133,10 +135,13 @@ export function generateReport() {
       `;
     }
 
+    let pathname = '/';
+    try { pathname = new URL(url).pathname || '/'; } catch {}
+
     pagesHtml += `
     <div class="page-card">
       <div class="page-header">
-        <h3><a href="${url}" target="_blank">${new URL(url).pathname || '/'}</a></h3>
+        <h3><a href="${url}" target="_blank">${pathname}</a></h3>
         <div class="page-stats">
           <span class="badge pass">✅ ${urlStats.PASS}</span>
           <span class="badge fail">❌ ${urlStats.FAIL}</span>
@@ -263,7 +268,7 @@ export function generateReport() {
     .has-tooltip::after { content: ''; position: absolute; bottom: 8px; right: 8px; width: 0; height: 0; border-style: solid; border-width: 0 0 6px 6px; border-color: transparent transparent #f87171 transparent; opacity: 0.5; }
     .tooltip { visibility: hidden; width: 260px; background-color: #1e293b; color: #f8fafc; text-align: left; border-radius: 8px; padding: 12px 16px; position: absolute; z-index: 10; bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%) translateY(10px); opacity: 0; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-size: 0.85em; font-weight: 400; border: 1px solid #475569; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5); pointer-events: none; line-height: 1.5; }
     .tooltip::before { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: #475569 transparent transparent transparent; }
-    .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); }
+    .has-tooltip:hover .tooltip { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
 
     footer { text-align: center; color: #64748b; font-size: 0.9em; margin-top: 60px; border-top: 1px solid #334155; padding-top: 30px; padding-bottom: 20px; }
   </style>

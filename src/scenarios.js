@@ -351,7 +351,7 @@ export async function runS9(browser, targetUrl, deviceDesc = null, screenshotPat
   return await runS2(browser, targetUrl, longKey, deviceDesc, screenshotPath);
 }
 
-
+// S10: Form interaction on Exchange page
 export async function runS10(browser, targetUrl, key, deviceDesc = null, screenshotPath = null) {
   let res = { status: 'INCONCLUSIVE', details: '', actualKey: null };
   const context = await browser.newContext({ ...deviceDesc, ignoreHTTPSErrors: true });
@@ -394,11 +394,11 @@ export async function runS10(browser, targetUrl, key, deviceDesc = null, screens
     
     if (res.status.startsWith('FAIL') || res.status === 'INCONCLUSIVE') {
       res.expectedKey = key;
-      await captureScreenshot(page, screenshotPath);
+      await captureScreenshot(page, screenshotPath, res.status);
     }
   } catch (err) {
     res.details = err.message;
-    await captureScreenshot(page, screenshotPath);
+    await captureScreenshot(page, screenshotPath, res.status);
   } finally {
     await context.close();
   }
