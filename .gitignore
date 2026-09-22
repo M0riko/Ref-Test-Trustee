@@ -1,9 +1,11 @@
 node_modules/
 .env
-db.sqlite
-db.sqlite-journal
-test-results/
-playwright-report/
-report.json
+db.sqlite*
+screenshots/
+report.html
 status.json
-.DS_Store
+stats.json
+junit.xml
+out.txt
+sitemap_dump.xml
+test-db.sqlite*
