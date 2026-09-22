@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Trustee Referral Monitor</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; color: #111827; margin: 0; padding: 20px; }
+    h1 { margin-top: 0; }
+    .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .summary { display: flex; gap: 20px; flex-wrap: wrap; }
+    .stat { background: #f9fafb; padding: 15px; border-radius: 6px; flex: 1; min-width: 150px; text-align: center; border: 1px solid #e5e7eb; }
+    .stat strong { display: block; font-size: 24px; color: #4f46e5; margin-top: 5px; }
+    table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+    tr:hover { background-color: #f9fafb; }
+    .status-PASS { color: #059669; font-weight: bold; }
+    .status-FAIL { color: #dc2626; font-weight: bold; }
+    .status-NO_STORE_LINK { color: #6b7280; }
+    .status-INCONCLUSIVE { color: #d97706; font-weight: bold; }
+    .details { font-size: 0.9em; color: #6b7280; max-width: 400px; word-wrap: break-word; }
+  </style>
+</head>
+<body>
+  <h1>Trustee Referral Monitor</h1>
+  
+  <div class="card summary">
+    <div class="stat">Запуск #<strong>2</strong><br><small>2026-09-21 21:08:11</small></div>
+    <div class="stat">Успішно (PASS)<strong>9</strong></div>
+    <div class="stat">Помилки (FAIL)<strong>45</strong></div>
+    <div class="stat">Немає лінків<strong>6</strong></div>
+    <div class="stat">Збої<strong>0</strong></div>
+  </div>
+
+  <h2>Детальні результати</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Сторінка</th>
+        <th>Сценарій</th>
+        <th>Статус</th>
+        <th>Очікуваний ключ</th>
+        <th>Фактичний ключ</th>
+        <th>Деталі</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      <tr>
+        <td><a href="https://travel.trusteeglobal.eu/" target="_blank">/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-NO_STORE_LINK">NO_STORE_LINK</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">No store links found on page</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://travel.trusteeglobal.eu/" target="_blank">/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-NO_STORE_LINK">NO_STORE_LINK</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">No store links found on page</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://travel.trusteeglobal.eu/" target="_blank">/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-NO_STORE_LINK">NO_STORE_LINK</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">No store links found on page</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://travel.trusteeglobal.eu/" target="_blank">/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-NO_STORE_LINK">NO_STORE_LINK</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">No store links found on page</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://travel.trusteeglobal.eu/" target="_blank">/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-NO_STORE_LINK">NO_STORE_LINK</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">No store links found on page</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://travel.trusteeglobal.eu/" target="_blank">/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-NO_STORE_LINK">NO_STORE_LINK</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">No store links found on page</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/" target="_blank">/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/" target="_blank">/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/" target="_blank">/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/" target="_blank">/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeplus.app.link/WoEs9XIVB6b has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/" target="_blank">/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/" target="_blank">/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/cryptocard/" target="_blank">/cryptocard/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeplus.app.link/product4site has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/cryptocard/" target="_blank">/cryptocard/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeplus.app.link/product4site has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/cryptocard/" target="_blank">/cryptocard/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/cryptocard/" target="_blank">/cryptocard/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeplus.app.link/product4site has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/cryptocard/" target="_blank">/cryptocard/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/cryptocard/" target="_blank">/cryptocard/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K; Store link https://trusteeplus.app.link/product4site has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/iban/" target="_blank">/iban/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeplus.app.link/RLBkNI8MyYb has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/iban/" target="_blank">/iban/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeplus.app.link/RLBkNI8MyYb has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/iban/" target="_blank">/iban/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/iban/" target="_blank">/iban/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeplus.app.link/RLBkNI8MyYb has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/iban/" target="_blank">/iban/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/iban/" target="_blank">/iban/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeplus.app.link/RLBkNI8MyYb has key null, expected T_E-S.T~K; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/stejking/" target="_blank">/stejking/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/stejking/" target="_blank">/stejking/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/stejking/" target="_blank">/stejking/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/ua/app/id1462924276?l=uk has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteewallet has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/stejking/" target="_blank">/stejking/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/stejking/" target="_blank">/stejking/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/stejking/" target="_blank">/stejking/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected T_E-S.T~K; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/" target="_blank">/trustee-wallet/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/" target="_blank">/trustee-wallet/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/" target="_blank">/trustee-wallet/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/ua/app/id1462924276?l=uk has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteewallet has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/" target="_blank">/trustee-wallet/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeplus.app.link/WoEs9XIVB6b has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/ua/app/id1462924276?l=uk has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteewallet has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/" target="_blank">/trustee-wallet/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/" target="_blank">/trustee-wallet/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected T_E-S.T~K; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/programma-loyalnosti/" target="_blank">/trustee-wallet/programma-loyalnosti/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/programma-loyalnosti/" target="_blank">/trustee-wallet/programma-loyalnosti/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/programma-loyalnosti/" target="_blank">/trustee-wallet/programma-loyalnosti/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/ua/app/id1462924276?l=uk has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteewallet has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/programma-loyalnosti/" target="_blank">/trustee-wallet/programma-loyalnosti/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected WoEs9XIVB6b; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/programma-loyalnosti/" target="_blank">/trustee-wallet/programma-loyalnosti/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/trustee-wallet/programma-loyalnosti/" target="_blank">/trustee-wallet/programma-loyalnosti/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteewallet.apk has key null, expected T_E-S.T~K; Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/" target="_blank">/wallet/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/" target="_blank">/wallet/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/" target="_blank">/wallet/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/" target="_blank">/wallet/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/" target="_blank">/wallet/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/" target="_blank">/wallet/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/btc/" target="_blank">/wallet/btc/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/ua/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&amp;hl=en has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/us/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/btc/" target="_blank">/wallet/btc/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/ua/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&amp;hl=en has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/us/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/btc/" target="_blank">/wallet/btc/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&amp;hl=en has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/btc/" target="_blank">/wallet/btc/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/ua/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&amp;hl=en has key null, expected WoEs9XIVB6b; Store link https://apps.apple.com/us/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/btc/" target="_blank">/wallet/btc/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wallet/btc/" target="_blank">/wallet/btc/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K; Store link https://apps.apple.com/ua/app/trustee-plus-wallet-card/id1634455978 has key null, expected T_E-S.T~K; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&amp;hl=en has key null, expected T_E-S.T~K; Store link https://apps.apple.com/us/app/trustee-plus-wallet-card/id1634455978 has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wiki/trustee-wallet/" target="_blank">/wiki/trustee-wallet/</a></td>
+        <td><strong>S1</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wiki/trustee-wallet/" target="_blank">/wiki/trustee-wallet/</a></td>
+        <td><strong>S2</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wiki/trustee-wallet/" target="_blank">/wiki/trustee-wallet/</a></td>
+        <td><strong>S3</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>WoEs9XIVB6b</td>
+        <td>WoEs9XIVB6b</td>
+        <td class="details">Store link https://apps.apple.com/pl/app/trustee-plus-wallet-card/id1634455978 has key null, expected WoEs9XIVB6b; Store link https://play.google.com/store/apps/details?id=com.trusteeplus&pli=1 has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wiki/trustee-wallet/" target="_blank">/wiki/trustee-wallet/</a></td>
+        <td><strong>S5</strong></td>
+        <td class="status-FAIL">FAIL_ALTERED</td>
+        <td>WoEs9XIVB6b</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected WoEs9XIVB6b</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wiki/trustee-wallet/" target="_blank">/wiki/trustee-wallet/</a></td>
+        <td><strong>S6</strong></td>
+        <td class="status-PASS">PASS</td>
+        <td>-</td>
+        <td>-</td>
+        <td class="details">All store links contain the correct key</td>
+      </tr>
+    
+      <tr>
+        <td><a href="https://trustee.io/wiki/trustee-wallet/" target="_blank">/wiki/trustee-wallet/</a></td>
+        <td><strong>S7</strong></td>
+        <td class="status-FAIL">FAIL_LOST</td>
+        <td>T_E-S.T~K</td>
+        <td>-</td>
+        <td class="details">Store link https://trusteeglobal.com/download/trusteeplus.apk has key null, expected T_E-S.T~K</td>
+      </tr>
+    
+    </tbody>
+  </table>
+</body>
+</html>
