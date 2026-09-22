@@ -50,7 +50,7 @@ export async function runS1(browser, rootUrl, targetUrl, key, deviceDesc = null)
   const page = await context.newPage();
   try {
     // Step 1: Land on root with referral key
-    await page.goto(`${rootUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(`${rootUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
 
@@ -71,11 +71,11 @@ export async function runS1(browser, rootUrl, targetUrl, key, deviceDesc = null)
 
     if (modifiedHref) {
       // Navigate using the href that the site's JS prepared (should contain ?r=KEY)
-      await page.goto(modifiedHref, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto(modifiedHref, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     } else {
       // Fallback: if no direct link to target found on root, go to target with key manually
       // This is less realistic but ensures we still test the page
-      await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     }
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
@@ -93,7 +93,7 @@ export async function runS2(browser, targetUrl, key, deviceDesc = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   try {
-    await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     return await evaluateStoreLinks(page, key);
@@ -109,7 +109,7 @@ export async function runS3(browser, targetUrl, key, deviceDesc = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   try {
-    await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(`${targetUrl}?r=${key}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
@@ -128,9 +128,9 @@ export async function runS5(browser, targetUrl, key1, key2, deviceDesc = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   try {
-    await page.goto(`${targetUrl}?r=${key1}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(`${targetUrl}?r=${key1}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-    await page.goto(`${targetUrl}?r=${key2}`, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(`${targetUrl}?r=${key2}`, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     const res = await evaluateStoreLinks(page, key2);
@@ -154,7 +154,7 @@ export async function runS6(browser, targetUrl, deviceDesc = null) {
   const context = await createContext(browser, deviceDesc);
   const page = await context.newPage();
   try {
-    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     const res = await evaluateStoreLinks(page, null);
@@ -189,7 +189,7 @@ export async function runS8(browser, targetUrl, key, deviceDesc = null) {
     urlObj.searchParams.set('utm_medium', 'cpc');
     urlObj.searchParams.set('r', key);
     
-    await page.goto(urlObj.toString(), { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(urlObj.toString(), { waitUntil: 'domcontentloaded', timeout: process.env.SCENARIO_TIMEOUT_MS ? parseInt(process.env.SCENARIO_TIMEOUT_MS) : 15000 });
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
     await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
     return await evaluateStoreLinks(page, key);
