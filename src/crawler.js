@@ -1,51 +1,51 @@
 import { extractLinks } from './extractor.js';
 
-/**
- * Crawls the domain starting from startUrl.
- * Returns { foundUrls: [...], failedUrls: [{url, reason}, ...] }.
- * Limits the number of pages to maxPages and depth to maxDepth.
- */
 export async function crawlSite(browser, startUrl, maxPages = 300, maxDepth = 10, delayMs = 500) {
   console.log(`Starting crawler from ${startUrl} (maxPages: ${maxPages}, maxDepth: ${maxDepth})`);
+  const rootDomain = new URL(startUrl).hostname;
+  
   const visited = new Set();
   const queue = [{ url: startUrl, depth: 0 }];
   const foundUrls = [];
   const failedUrls = [];
+  const truncatedUrls = [];
   
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  while (queue.length > 0 && foundUrls.length < maxPages) {
+  while (queue.length > 0) {
+    if (foundUrls.length >= maxPages) {
+      for (const item of queue) {
+        truncatedUrls.push({ url: item.url, reason: 'page_limit' });
+      }
+      break;
+    }
+
     const current = queue.shift();
     const currentUrl = current.url;
     const depth = current.depth;
     
-    if (depth > maxDepth) continue;
+    if (depth > maxDepth) {
+      truncatedUrls.push({ url: currentUrl, reason: 'depth_limit' });
+      continue;
+    }
     
-    // Normalize URL to avoid duplicates
     let normalUrl;
     try {
       const u = new URL(currentUrl);
-      
-      // Ignore non-HTML files
       const IGNORED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.zip', '.svg', '.mp4', '.mp3', '.apk'];
       if (IGNORED_EXTENSIONS.some(ext => u.pathname.toLowerCase().endsWith(ext))) {
         continue;
       }
-      
-      u.hash = ''; // As per user request, keep stripping hash
-      
-      // Sort query parameters to avoid ?a=1&b=2 and ?b=2&a=1 being duplicates
+      u.hash = '';
       const params = new URLSearchParams(u.search);
       const sortedParams = Array.from(params.entries()).sort((a, b) => a[0].localeCompare(b[0]));
       u.search = new URLSearchParams(sortedParams).toString();
 
       let urlStr = u.toString();
-      // Remove trailing slash if there's a path (but keep it for root domain)
       if (urlStr.endsWith('/') && u.pathname !== '/') {
         urlStr = urlStr.slice(0, -1);
       }
-      
       normalUrl = urlStr;
     } catch {
       continue;
@@ -58,12 +58,9 @@ export async function crawlSite(browser, startUrl, maxPages = 300, maxDepth = 10
     try {
       await page.goto(normalUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
       
-      // Wait for networkidle
       await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-      // Wait specifically for store links to appear
-      await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"]', { timeout: 3000 }).catch(() => {});
+      await page.waitForSelector('a[href*="apps.apple.com"], a[href*="play.google.com"], a[href*="app.link"], a[href*="appsflyer"], a[href*="branch.io"]', { timeout: 3000 }).catch(() => {});
       
-      // Handle redirect (Bug 6)
       let finalUrl = page.url();
       if (finalUrl !== normalUrl) {
         try {
@@ -77,16 +74,15 @@ export async function crawlSite(browser, startUrl, maxPages = 300, maxDepth = 10
             finalUrlStr = finalUrlStr.slice(0, -1);
           }
           if (finalUrlStr !== normalUrl) {
-            console.log(`  -> Redirected to: ${finalUrlStr}`);
             visited.add(finalUrlStr);
             normalUrl = finalUrlStr;
           }
-        } catch { /* ignore parsing errors on redirect url */ }
+        } catch {}
       }
 
       foundUrls.push(normalUrl);
       
-      const { internal } = await extractLinks(page);
+      const { internal } = await extractLinks(page, rootDomain);
       for (const link of internal) {
         queue.push({ url: link, depth: depth + 1 });
       }
@@ -94,11 +90,10 @@ export async function crawlSite(browser, startUrl, maxPages = 300, maxDepth = 10
       console.log(`Failed to crawl ${normalUrl}: ${err.message}`);
       failedUrls.push({ url: normalUrl, reason: err.message });
     } finally {
-      // Rate limiting (Bug 5)
       await new Promise(r => setTimeout(r, delayMs));
     }
   }
 
   await context.close();
-  return { foundUrls, failedUrls };
+  return { foundUrls, failedUrls, truncatedUrls };
 }

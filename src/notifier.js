@@ -77,10 +77,11 @@ export async function notifySuccess(runId, stats) {
  * Notify that a run crashed.
  */
 export async function notifyFailure(runId, reason) {
+  const safeReason = String(reason).slice(0, 500).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   await sendMessage(
     `🚨 <b>Trustee Referral Monitor — CRASHED</b>\n` +
     `❌ Run <b>#${runId}</b> failed with an error:\n\n` +
-    `<code>${String(reason).slice(0, 500)}</code>\n\n` +
+    `<code>${safeReason}</code>\n\n` +
     `⏱ <i>${new Date().toISOString()}</i>`
   );
 }

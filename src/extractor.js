@@ -1,12 +1,12 @@
-export async function extractLinks(page) {
-  return await page.evaluate(() => {
+export async function extractLinks(page, rootDomain = 'trustee.io') {
+  return await page.evaluate((domain) => {
     const allLinks = Array.from(document.querySelectorAll('a')).map(a => a.href).filter(h => h);
     
-    // Internal links (trustee.io)
+    // Internal links
     const internal = [...new Set(allLinks.filter(href => {
       try {
         const url = new URL(href);
-        return url.hostname === 'trustee.io' || url.hostname.endsWith('.trustee.io');
+        return url.hostname === domain || url.hostname.endsWith('.' + domain);
       } catch {
         return false;
       }
@@ -23,7 +23,7 @@ export async function extractLinks(page) {
     }))];
 
     return { internal, stores };
-  });
+  }, rootDomain);
 }
 
 /**
