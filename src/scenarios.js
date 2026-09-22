@@ -171,3 +171,32 @@ export async function runS7(browser, targetUrl, deviceDesc = null) {
   const specialKey = 'T_E-S.T~K';
   return await runS2(browser, targetUrl, specialKey, deviceDesc);
 }
+
+// S8: UTM Parameters presence
+// Ensures the referral key survives even if other marketing params exist
+export async function runS8(browser, targetUrl, key, deviceDesc = null) {
+  const context = await createContext(browser, deviceDesc);
+  const page = await context.newPage();
+  try {
+    const urlObj = new URL(targetUrl);
+    urlObj.searchParams.set('utm_source', 'telegram');
+    urlObj.searchParams.set('utm_medium', 'cpc');
+    urlObj.searchParams.set('r', key);
+    
+    await page.goto(urlObj.toString(), { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.waitForTimeout(2000);
+    return await evaluateStoreLinks(page, key);
+  } catch (err) {
+    return { status: 'INCONCLUSIVE', details: err.message, actualKey: null };
+  } finally {
+    await context.close();
+  }
+}
+
+// S9: Edge case - extremely long key
+// Verifies there's no unexpected database/trimming length limits on the site side
+export async function runS9(browser, targetUrl, deviceDesc = null) {
+  // 120 character long key
+  const longKey = 'LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890';
+  return await runS2(browser, targetUrl, longKey, deviceDesc);
+}

@@ -3,7 +3,7 @@ import { chromium, devices } from 'playwright';
 import { startRun, finishRun, savePage, saveCheck, incrementFailures, resetFailures } from './storage.js';
 import { extractLinks, extractKeyFromUrl } from './extractor.js';
 import { crawlSite } from './crawler.js';
-import { runS1, runS2, runS3, runS5, runS6, runS7 } from './scenarios.js';
+import { runS1, runS2, runS3, runS5, runS6, runS7, runS8, runS9 } from './scenarios.js';
 import { notifyStart, notifySuccess, notifyFailure } from './notifier.js';
 
 
@@ -98,6 +98,12 @@ async function runWithConcurrency(tasks, limit = 6) {
 }
 
 async function main() {
+  // Global watchdog timeout: 40 minutes (prevents the script from hanging forever)
+  const watchdog = setTimeout(() => {
+    console.error('🚨 Global timeout reached (40m). Force killing process to prevent zombie run.');
+    process.exit(1);
+  }, 40 * 60 * 1000);
+
   const rootUrl = process.env.TARGET_URL || 'https://trustee.io';
   const defaultKey = 'WoEs9XIVB6b';
   const maxPages = parseInt(process.env.MAX_PAGES || '15', 10);
@@ -114,8 +120,8 @@ async function main() {
 
   try {
     const pages = await crawlSite(browser, rootUrl, maxPages);
-    const totalChecks = pages.length * 7 * DEVICE_PROFILES.length;
-    console.log(`\nFound ${pages.length} pages × 7 scenarios × ${DEVICE_PROFILES.length} devices = ${totalChecks} checks`);
+    const totalChecks = pages.length * 9 * DEVICE_PROFILES.length;
+    console.log(`\nFound ${pages.length} pages × 9 scenarios × ${DEVICE_PROFILES.length} devices = ${totalChecks} checks`);
     console.log(`Running with parallelism (up to 6 concurrent)...\n`);
 
     // Telegram: notify run started
@@ -137,6 +143,8 @@ async function main() {
         tasks.push(() => runS5(browser, url, 'OLD_KEY_ABC', defaultKey, device.desc).then(r => ({ id: `S5_${device.name}`, expected: defaultKey, ...r })));
         tasks.push(() => runS6(browser, url, device.desc).then(r => ({ id: `S6_${device.name}`, expected: null, ...r })));
         tasks.push(() => runS7(browser, url, device.desc).then(r => ({ id: `S7_${device.name}`, expected: 'T_E-S.T~K', ...r })));
+        tasks.push(() => runS8(browser, url, defaultKey, device.desc).then(r => ({ id: `S8_${device.name}`, expected: defaultKey, ...r })));
+        tasks.push(() => runS9(browser, url, device.desc).then(r => ({ id: `S9_${device.name}`, expected: 'LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890', ...r })));
       }
 
       const results = await runWithConcurrency(tasks, 6);
@@ -173,6 +181,7 @@ async function main() {
     await notifyFailure(runId, err.message); // 🚨 Telegram alert
     await hcPing('/fail');                   // ❌ HC.io ping
   } finally {
+    clearTimeout(watchdog);
     await browser.close();
   }
 

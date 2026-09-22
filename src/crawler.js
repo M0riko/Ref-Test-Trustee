@@ -16,13 +16,31 @@ export async function crawlSite(browser, startUrl, maxPages = 5) {
   while (queue.length > 0 && foundUrls.length < maxPages) {
     const currentUrl = queue.shift();
     
-    // Normalize URL to avoid duplicates (remove hashes, query params)
+    // Normalize URL to avoid duplicates
     let normalUrl;
     try {
       const u = new URL(currentUrl);
+      
+      // Ignore non-HTML files
+      const IGNORED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.zip', '.svg', '.mp4', '.mp3', '.apk'];
+      if (IGNORED_EXTENSIONS.some(ext => u.pathname.toLowerCase().endsWith(ext))) {
+        continue;
+      }
+
       u.hash = '';
-      u.search = '';
-      normalUrl = u.toString();
+      
+      // Sort query parameters to avoid ?a=1&b=2 and ?b=2&a=1 being duplicates
+      const params = new URLSearchParams(u.search);
+      const sortedParams = Array.from(params.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+      u.search = new URLSearchParams(sortedParams).toString();
+
+      let urlStr = u.toString();
+      // Remove trailing slash if there's a path (but keep it for root domain)
+      if (urlStr.endsWith('/') && u.pathname !== '/') {
+        urlStr = urlStr.slice(0, -1);
+      }
+      
+      normalUrl = urlStr;
     } catch {
       continue;
     }
