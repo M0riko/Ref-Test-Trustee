@@ -1,9 +1,11 @@
+import 'dotenv/config';
 import { chromium, devices } from 'playwright';
-import { startRun, finishRun, savePage, saveCheck, getConsecutiveFailures, incrementFailures, resetFailures } from './storage.js';
+import { startRun, finishRun, savePage, saveCheck, incrementFailures, resetFailures } from './storage.js';
 import { extractLinks, extractKeyFromUrl } from './extractor.js';
 import { crawlSite } from './crawler.js';
 import { runS1, runS2, runS3, runS5, runS6, runS7 } from './scenarios.js';
 import { notifyStart, notifySuccess, notifyFailure } from './notifier.js';
+
 
 const DEVICE_PROFILES = [
   { 
