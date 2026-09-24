@@ -48,4 +48,5 @@ jobs:
           path: |
             report.html
             status.json
+            screenshots/
           retention-days: 30
