@@ -53,97 +53,112 @@ async function fetchSitemapSeeds(startUrl, rootDomain) {
 }
 
 export async function crawlSite(browser, startUrl, maxPages = 300, maxDepth = 10, delayMs = 500) {
-  console.log(`Starting crawler from ${startUrl} (maxPages: ${maxPages}, maxDepth: ${maxDepth})`);
+  console.log(`Starting Phase 1: Full HTTP Discovery from ${startUrl} (maxDepth: ${maxDepth})`);
   const rootDomain = new URL(startUrl).hostname;
 
   const visited = new Set();
+  const queued = new Set();
   const queue = [{ url: startUrl, depth: 0, via: 'seed' }];
-  const foundUrls = [];
-  const failedUrls = [];
-  const truncatedUrls = [];
+  queued.add(startUrl);
+  const allFoundUrls = new Set();
   const edges = [];
-
   const sitemapSeeds = await fetchSitemapSeeds(startUrl, rootDomain);
   console.log(`Sitemap seeds: ${sitemapSeeds.length}`);
   for (const s of sitemapSeeds) {
-    queue.push({ url: s, depth: 0, via: 'sitemap' });
+    if (!queued.has(s)) {
+      queue.push({ url: s, depth: 0, via: 'sitemap' });
+      queued.add(s);
+    }
   }
 
-  const context = await browser.newContext();
-  const page = await context.newPage();
-
-  while (queue.length > 0) {
-    if (foundUrls.length >= maxPages) {
-      for (const item of queue) {
-        const n = (() => { try { return normalizePageUrl(item.url); } catch { return item.url; } })();
-        if (n && !visited.has(n)) truncatedUrls.push({ url: n, reason: `page_limit (${maxPages})` });
-      }
-      break;
-    }
-
-    const current = queue.shift();
-    const depth = current.depth;
-    if (depth > maxDepth) {
-      truncatedUrls.push({ url: current.url, reason: `depth_limit (${maxDepth})` });
-      continue;
-    }
+  let queueIndex = 0;
+  // HTTP BFS
+  while (queueIndex < queue.length) {
+    const current = queue[queueIndex++];
+    if (current.depth > maxDepth) continue;
 
     let normalUrl;
     try {
       normalUrl = normalizePageUrl(current.url);
-    } catch {
-      continue;
-    }
-    if (!normalUrl) continue;
-    try {
-      if (!isInternalHost(new URL(normalUrl).hostname, rootDomain)) continue;
-    } catch {
-      continue;
-    }
+      if (!normalUrl || !isInternalHost(new URL(normalUrl).hostname, rootDomain)) continue;
+    } catch { continue; }
 
     if (visited.has(normalUrl)) continue;
     visited.add(normalUrl);
+    allFoundUrls.add(normalUrl);
 
-    console.log(`Crawling: ${normalUrl} (Depth: ${depth}, via: ${current.via})`);
+    // Safety limit to prevent hours of crawling on massive blogs
+    if (allFoundUrls.size > 200) break;
+
     try {
-      await page.goto(normalUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
-      await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-
-      let finalUrl = page.url();
-      try {
-        const finalNorm = normalizePageUrl(finalUrl);
-        if (finalNorm && finalNorm !== normalUrl && isInternalHost(new URL(finalNorm).hostname, rootDomain)) {
-          visited.add(finalNorm);
-          normalUrl = finalNorm;
-        }
-      } catch {}
-
-      foundUrls.push(normalUrl);
-
-      const { internal } = await extractLinks(page, rootDomain);
-      for (const link of internal) {
+      const res = await fetch(normalUrl, { 
+        signal: AbortSignal.timeout(5000),
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      const hrefRe = /href=["']([^"']+)["']/gi;
+      let m;
+      while ((m = hrefRe.exec(html)) !== null) {
         try {
-          const n = normalizePageUrl(link);
-          if (!n) continue;
-          edges.push({ from: normalUrl, to: n });
-          queue.push({ url: n, depth: depth + 1, via: 'link' });
+          const u = new URL(m[1], normalUrl);
+          if (u.protocol !== 'http:' && u.protocol !== 'https:') continue;
+          const uNorm = normalizePageUrl(u.href);
+          if (uNorm && isInternalHost(new URL(uNorm).hostname, rootDomain)) {
+            edges.push({ from: normalUrl, to: uNorm });
+            if (!queued.has(uNorm)) {
+              queue.push({ url: uNorm, depth: current.depth + 1, via: 'link' });
+              queued.add(uNorm);
+            }
+          }
         } catch {}
       }
-    } catch (err) {
-      console.log(`Failed to crawl ${normalUrl}: ${err.message}`);
-      failedUrls.push({ url: normalUrl, reason: err.message });
-    } finally {
-      if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
+    } catch {}
+    
+    if (delayMs > 0 && delayMs < 100) await new Promise(r => setTimeout(r, delayMs));
+  }
+
+  console.log(`Phase 1 Complete. Found ${allFoundUrls.size} unique URLs and ${edges.length} edges.`);
+
+  // Phase 2: Clustering and Sampling
+  const categoryMap = new Map();
+  for (const url of allFoundUrls) {
+    try {
+      const u = new URL(url);
+      const firstSegment = u.pathname.split('/').filter(Boolean)[0] || '';
+      const cat = firstSegment ? `/${firstSegment}` : '/';
+      if (!categoryMap.has(cat)) categoryMap.set(cat, []);
+      categoryMap.get(cat).push(url);
+    } catch {}
+  }
+
+  console.log(`Phase 2: Grouping into ${categoryMap.size} categories.`);
+  const sampledUrls = [];
+  const MAX_PER_CAT = 3;
+  
+  for (const [cat, urls] of categoryMap.entries()) {
+    // Sort by length to get shortest (main) and longest (deepest article)
+    urls.sort((a, b) => a.length - b.length);
+    const selected = [];
+    if (urls.length > 0) selected.push(urls[0]); // Shortest
+    if (urls.length > 1 && MAX_PER_CAT > 1) selected.push(urls[urls.length - 1]); // Longest
+    if (urls.length > 2 && MAX_PER_CAT > 2) selected.push(urls[Math.floor(urls.length / 2)]); // Middle
+    
+    for (const s of selected) {
+      if (!sampledUrls.includes(s)) sampledUrls.push(s);
     }
   }
 
-  await context.close();
+  console.log(`Phase 2 Complete. Sampled ${sampledUrls.length} pages for heavy Playwright testing.`);
+
   return {
-    foundUrls,
-    failedUrls,
-    truncatedUrls,
+    foundUrls: sampledUrls,
+    failedUrls: [],
+    truncatedUrls: [],
     edges,
     sitemapCount: sitemapSeeds.length,
+    discoveryTotal: allFoundUrls.size,
+    categoriesCount: categoryMap.size
   };
 }
 

@@ -29,9 +29,12 @@ const DEVICE_PROFILES = isTest
   ? ALL_DEVICE_PROFILES.filter(d => d.name === 'desktop')
   : ALL_DEVICE_PROFILES;
 
-const DEFAULT_KEY = 'WoEs9XIVB6b';
-const OLD_KEY = 'OLD_KEY_ABC';
-const LONG_KEY = 'LONGKEY_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890_1234567890';
+import crypto from 'crypto';
+
+function generateRandomKey() {
+  return crypto.randomBytes(6).toString('hex'); // 12 random hex chars
+}
+
 const SKIPPED = new Set(['NO_STORE_LINK', 'NO_INTERNAL_LINK', 'STOP_CHAIN', 'NO_FORM']);
 
 async function hcPing(suffix = '') {
@@ -93,16 +96,21 @@ function planForPage(url, rootUrl, pages, edges, device) {
   const onlyDesktop = device.name === 'desktop';
   const deep = isDeepPage(url, rootUrl);
 
-  jobs.push({ id: 'S2', expected: DEFAULT_KEY, run: (br, sp) => runS2(br, url, DEFAULT_KEY, device.desc, sp) });
+  const keyS1 = generateRandomKey();
+  const keyS2 = generateRandomKey();
+  const keyS3 = generateRandomKey();
+  const keyS4 = generateRandomKey();
+  const keyS5Old = generateRandomKey();
+  const keyS5New = generateRandomKey();
+
+  jobs.push({ id: 'S2', expected: keyS2, run: (br, sp) => runS2(br, url, keyS2, device.desc, sp) });
 
   if (fullScenarios || onlyDesktop) {
-    jobs.push({ id: 'S1', expected: DEFAULT_KEY, run: (br, sp) => runS1(br, rootUrl, url, DEFAULT_KEY, device.desc, sp) });
-    jobs.push({ id: 'S3', expected: DEFAULT_KEY, run: (br, sp) => runS3(br, url, DEFAULT_KEY, device.desc, sp) });
-    jobs.push({ id: 'S5', expected: DEFAULT_KEY, run: (br, sp) => runS5(br, url, OLD_KEY, DEFAULT_KEY, device.desc, sp) });
+    jobs.push({ id: 'S1', expected: keyS1, run: (br, sp) => runS1(br, rootUrl, url, keyS1, device.desc, sp) });
+    jobs.push({ id: 'S3', expected: keyS3, run: (br, sp) => runS3(br, url, keyS3, device.desc, sp) });
+    jobs.push({ id: 'S5', expected: keyS5New, run: (br, sp) => runS5(br, url, keyS5Old, keyS5New, device.desc, sp) });
     jobs.push({ id: 'S6', expected: null, run: (br, sp) => runS6(br, url, device.desc, sp) });
   }
-
-
 
   if (fullScenarios || onlyDesktop) {
     const chain = findTwoHopChain(rootUrl, url, edges);
@@ -110,7 +118,7 @@ function planForPage(url, rootUrl, pages, edges, device) {
     const fallbackNext = pages[(idx + 1) % Math.max(pages.length, 1)] || url;
     const mid = chain?.intermediate || url;
     const dest = chain?.target || fallbackNext;
-    jobs.push({ id: 'S4', expected: DEFAULT_KEY, run: (br, sp) => runS4(br, rootUrl, mid, dest, DEFAULT_KEY, device.desc, sp) });
+    jobs.push({ id: 'S4', expected: keyS4, run: (br, sp) => runS4(br, rootUrl, mid, dest, keyS4, device.desc, sp) });
   }
 
   return jobs;
@@ -167,33 +175,38 @@ async function main() {
     console.log(`\nCoverage: ${pages.length} pages, sitemap seeds ${sitemapCount}, ${failedUrls.length} crawl errors, ${truncatedUrls.length} truncated`);
     await notifyStart(runId, pages.length);
 
-    for (let i = 0; i < pages.length; i++) {
-      const url = pages[i];
-      const pageId = savePage(runId, url);
-      console.log(`Testing ${url}...`);
+    const pageIds = new Map();
+    for (const url of pages) {
+      pageIds.set(url, savePage(runId, url));
+    }
 
+    const runDevice = async (device) => {
+      const br = browsers[device.engine];
+      if (!br) return;
+      
       const tasks = [];
-      for (const device of DEVICE_PROFILES) {
-        const br = browsers[device.engine];
-        if (!br) continue;
+      for (const url of pages) {
+        const pageId = pageIds.get(url);
         const jobs = planForPage(url, rootUrl, pages, edges, device);
+        
         for (const job of jobs) {
           tasks.push(async () => {
             const screenshotPath = path.join(SCREENSHOTS_DIR, `${runId}_${pageId}_${job.id}_${device.name}.png`);
             const res = await runWithRetry(() => job.run(br, screenshotPath));
-            return { id: `${job.id}_${device.name}`, expected: job.expected, screenshotPath, ...res };
+            const shot = (res.status.startsWith('FAIL') || res.status === 'INCONCLUSIVE') ? screenshotPath : null;
+            
+            saveCheck(runId, pageId, `${job.id}_${device.name}`, job.expected, res.actualKey, res.status, res.details, shot);
+            const icon = res.status === 'PASS' ? '✓' : SKIPPED.has(res.status) ? '○' : '✗';
+            console.log(`[${device.name}] ${icon} ${url} - ${job.id}: ${res.status}`);
           });
         }
       }
+      
+      const deviceConcurrency = parseInt(process.env.CONCURRENCY || '2', 10);
+      await runWithConcurrency(tasks, deviceConcurrency);
+    };
 
-      const results = await runWithConcurrency(tasks, parseInt(process.env.CONCURRENCY || '4', 10));
-      for (const r of results) {
-        const shot = (r.status.startsWith('FAIL') || r.status === 'INCONCLUSIVE') ? r.screenshotPath : null;
-        saveCheck(runId, pageId, r.id, r.expected, r.actualKey, r.status, r.details, shot);
-        const icon = r.status === 'PASS' ? '✓' : SKIPPED.has(r.status) ? '○' : '✗';
-        console.log(`  ${icon} ${r.id}: ${r.status}`);
-      }
-    }
+    await Promise.all(DEVICE_PROFILES.map(d => runDevice(d)));
 
     finishRun(runId, 'COMPLETED');
     resetFailures();

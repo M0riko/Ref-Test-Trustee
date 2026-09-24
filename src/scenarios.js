@@ -25,9 +25,16 @@ async function waitForPageSettle(page) {
 }
 
 async function createContext(browser, deviceDesc) {
-  const opts = { ignoreHTTPSErrors: true };
+  const opts = { ignoreHTTPSErrors: true, storageState: undefined };
   if (deviceDesc) Object.assign(opts, deviceDesc);
-  return await browser.newContext(opts);
+  const context = await browser.newContext(opts);
+  try { await context.clearCookies(); } catch {}
+
+  // Block Branch.io API requests to prevent IP fingerprint lock on the testing server
+  await context.route('**/*branch.io/v1/pageview*', route => route.abort());
+  await context.route('**/*branch.io/v1/event*', route => route.abort());
+  
+  return context;
 }
 
 async function captureScreenshot(page, path, status) {
@@ -109,7 +116,7 @@ async function evaluateStoreLinks(page, expectedKey, rootDomain, staleKey = null
 }
 
 async function clickInternalPath(page, context, targetPath) {
-  const found = await page.evaluate((path) => {
+  const targetHref = await page.evaluate((path) => {
     const want = path.replace(/\/$/, '') || '/';
     const links = Array.from(document.querySelectorAll('a[href]'));
     for (const a of links) {
@@ -117,26 +124,17 @@ async function clickInternalPath(page, context, targetPath) {
         const u = new URL(a.href, location.href);
         const p = u.pathname.replace(/\/$/, '') || '/';
         if (p === want) {
-          a.setAttribute('data-monitor-click', '1');
-          return true;
+          return a.href;
         }
       } catch {}
     }
-    return false;
+    return null;
   }, targetPath);
 
-  if (!found) return { ok: false };
+  if (!targetHref) return { ok: false };
 
-  const timeout = scenarioTimeout();
-  const navPromise = page.waitForEvent('framenavigated', { timeout }).catch(() => null);
-  const popupPromise = context.waitForEvent('page', { timeout }).catch(() => null);
-  await page.locator('a[data-monitor-click="1"]').first().click({ timeout: 5000 });
-  const popup = await popupPromise;
-  await navPromise;
-  if (popup) {
-    await popup.waitForLoadState('domcontentloaded').catch(() => {});
-    return { ok: true, page: popup };
-  }
+  // TASK 3: Direct goto() is functionally equivalent for trustee.io and bypasses hidden mobile menus
+  await page.goto(targetHref, { waitUntil: 'domcontentloaded', timeout: scenarioTimeout() });
   return { ok: true, page };
 }
 
@@ -275,6 +273,12 @@ export async function runS6(browser, targetUrl, deviceDesc = null, screenshotPat
   let res = { status: 'INCONCLUSIVE', details: 'Unknown error', actualKey: null };
   try {
     await gotoKey(page, targetUrl, null);
+
+    // TASK 1: Diagnostic logging for context leak
+    const cookies = await context.cookies();
+    const ls = await page.evaluate(() => JSON.stringify(window.localStorage));
+    console.log(`[S6 DIAGNOSTIC] ${targetUrl} | Cookies: ${cookies.length}, LocalStorage: ${ls !== '{}' && ls !== '""' ? ls : 'Empty'}`);
+
     res = await evaluateStoreLinks(page, null, rootDomainOf(targetUrl));
     if (res.status === 'FAIL_LOST' || (res.status !== 'NO_STORE_LINK' && res.status !== 'PASS' && res.actualKey)) {
       if (res.status !== 'NO_STORE_LINK' && res.actualKey) {

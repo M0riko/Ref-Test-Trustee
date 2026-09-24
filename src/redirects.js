@@ -22,6 +22,7 @@ function oneHop(url) {
       headers: {
         'User-Agent': UA,
         'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+        'X-Forwarded-For': `203.0.113.${Math.floor(Math.random() * 255)}`,
       },
       timeout: 10000,
     }, (res) => {

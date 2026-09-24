@@ -1,6 +1,6 @@
 {
-  "passed": false,
-  "generated_at": "2026-09-22T20:41:22.046Z",
+  "passed": true,
+  "generated_at": "2026-09-24T13:15:39.184Z",
   "assertions": {
     "pass_on_good_page": true,
     "fail_lost": true,
@@ -16,14 +16,6 @@
   "checks": [
     {
       "url": "http://127.0.0.1:3000/",
-      "scenario": "S2_desktop",
-      "status": "PASS",
-      "details": "All 1 store link(s) carry the expected key",
-      "expected_key": "WoEs9XIVB6b",
-      "actual_key": "WoEs9XIVB6b"
-    },
-    {
-      "url": "http://127.0.0.1:3000/",
       "scenario": "S1_desktop",
       "status": "NO_INTERNAL_LINK",
       "details": "S1 skipped: target is the landing page",
@@ -32,6 +24,14 @@
     },
     {
       "url": "http://127.0.0.1:3000/",
+      "scenario": "S2_desktop",
+      "status": "PASS",
+      "details": "All 1 store link(s) carry the expected key",
+      "expected_key": "WoEs9XIVB6b",
+      "actual_key": "WoEs9XIVB6b"
+    },
+    {
+      "url": "http://127.0.0.1:3000/",
       "scenario": "S3_desktop",
       "status": "PASS",
       "details": "All 1 store link(s) carry the expected key",
@@ -55,16 +55,16 @@
       "actual_key": null
     },
     {
-      "url": "http://127.0.0.1:3000/",
-      "scenario": "S4_desktop",
+      "url": "http://127.0.0.1:3000/broken",
+      "scenario": "S2_desktop",
       "status": "FAIL_LOST",
       "details": "https://play.google.com/store/apps/details?id=com.trustee → key=\"null\", expected=\"WoEs9XIVB6b\"",
       "expected_key": "WoEs9XIVB6b",
       "actual_key": null
     },
     {
-      "url": "http://127.0.0.1:3000/broken",
-      "scenario": "S2_desktop",
+      "url": "http://127.0.0.1:3000/",
+      "scenario": "S4_desktop",
       "status": "FAIL_LOST",
       "details": "https://play.google.com/store/apps/details?id=com.trustee → key=\"null\", expected=\"WoEs9XIVB6b\"",
       "expected_key": "WoEs9XIVB6b",
@@ -103,20 +103,20 @@
       "actual_key": null
     },
     {
-      "url": "http://127.0.0.1:3000/broken",
-      "scenario": "S4_desktop",
-      "status": "FAIL_LOST",
-      "details": "https://play.google.com/store/apps/details?id=com.trustee → key=\"null\", expected=\"WoEs9XIVB6b\"",
-      "expected_key": "WoEs9XIVB6b",
-      "actual_key": null
-    },
-    {
       "url": "http://127.0.0.1:3000/altered",
       "scenario": "S2_desktop",
       "status": "FAIL_ALTERED",
       "details": "https://apps.apple.com/app/id12345?r=NOT_THE_KEY → key=\"NOT_THE_KEY\", expected=\"WoEs9XIVB6b\"",
       "expected_key": "WoEs9XIVB6b",
       "actual_key": "NOT_THE_KEY"
+    },
+    {
+      "url": "http://127.0.0.1:3000/broken",
+      "scenario": "S4_desktop",
+      "status": "FAIL_LOST",
+      "details": "https://play.google.com/store/apps/details?id=com.trustee → key=\"null\", expected=\"WoEs9XIVB6b\"",
+      "expected_key": "WoEs9XIVB6b",
+      "actual_key": null
     },
     {
       "url": "http://127.0.0.1:3000/altered",
@@ -129,14 +129,6 @@
     {
       "url": "http://127.0.0.1:3000/altered",
       "scenario": "S3_desktop",
-      "status": "FAIL_ALTERED",
-      "details": "https://apps.apple.com/app/id12345?r=NOT_THE_KEY → key=\"NOT_THE_KEY\", expected=\"WoEs9XIVB6b\"",
-      "expected_key": "WoEs9XIVB6b",
-      "actual_key": "NOT_THE_KEY"
-    },
-    {
-      "url": "http://127.0.0.1:3000/altered",
-      "scenario": "S5_desktop",
       "status": "FAIL_ALTERED",
       "details": "https://apps.apple.com/app/id12345?r=NOT_THE_KEY → key=\"NOT_THE_KEY\", expected=\"WoEs9XIVB6b\"",
       "expected_key": "WoEs9XIVB6b",
@@ -152,7 +144,7 @@
     },
     {
       "url": "http://127.0.0.1:3000/altered",
-      "scenario": "S4_desktop",
+      "scenario": "S5_desktop",
       "status": "FAIL_ALTERED",
       "details": "https://apps.apple.com/app/id12345?r=NOT_THE_KEY → key=\"NOT_THE_KEY\", expected=\"WoEs9XIVB6b\"",
       "expected_key": "WoEs9XIVB6b",
@@ -165,6 +157,14 @@
       "details": "https://apps.apple.com/app/id12345?r=OLD_KEY_ABC → key=\"OLD_KEY_ABC\", expected=\"WoEs9XIVB6b\"",
       "expected_key": "WoEs9XIVB6b",
       "actual_key": "OLD_KEY_ABC"
+    },
+    {
+      "url": "http://127.0.0.1:3000/altered",
+      "scenario": "S4_desktop",
+      "status": "FAIL_ALTERED",
+      "details": "https://apps.apple.com/app/id12345?r=NOT_THE_KEY → key=\"NOT_THE_KEY\", expected=\"WoEs9XIVB6b\"",
+      "expected_key": "WoEs9XIVB6b",
+      "actual_key": "NOT_THE_KEY"
     },
     {
       "url": "http://127.0.0.1:3000/stale-key",
@@ -199,20 +199,20 @@
       "actual_key": "OLD_KEY_ABC"
     },
     {
-      "url": "http://127.0.0.1:3000/stale-key",
-      "scenario": "S4_desktop",
-      "status": "FAIL_ALTERED",
-      "details": "https://apps.apple.com/app/id12345?r=OLD_KEY_ABC → key=\"OLD_KEY_ABC\", expected=\"WoEs9XIVB6b\"",
-      "expected_key": "WoEs9XIVB6b",
-      "actual_key": "OLD_KEY_ABC"
-    },
-    {
       "url": "http://127.0.0.1:3000/storage-only",
       "scenario": "S2_desktop",
       "status": "FAIL_LOST",
       "details": "https://apps.apple.com/app/id12345 → key=\"null\", expected=\"WoEs9XIVB6b\"",
       "expected_key": "WoEs9XIVB6b",
       "actual_key": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/stale-key",
+      "scenario": "S4_desktop",
+      "status": "FAIL_ALTERED",
+      "details": "https://apps.apple.com/app/id12345?r=OLD_KEY_ABC → key=\"OLD_KEY_ABC\", expected=\"WoEs9XIVB6b\"",
+      "expected_key": "WoEs9XIVB6b",
+      "actual_key": "OLD_KEY_ABC"
     },
     {
       "url": "http://127.0.0.1:3000/storage-only",
@@ -232,18 +232,18 @@
     },
     {
       "url": "http://127.0.0.1:3000/storage-only",
-      "scenario": "S5_desktop",
-      "status": "FAIL_LOST",
-      "details": "https://apps.apple.com/app/id12345 → key=\"null\", expected=\"WoEs9XIVB6b\"",
-      "expected_key": "WoEs9XIVB6b",
-      "actual_key": null
-    },
-    {
-      "url": "http://127.0.0.1:3000/storage-only",
       "scenario": "S6_desktop",
       "status": "PASS",
       "details": "All 1 store link(s) carry the expected key",
       "expected_key": null,
+      "actual_key": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/storage-only",
+      "scenario": "S5_desktop",
+      "status": "FAIL_LOST",
+      "details": "https://apps.apple.com/app/id12345 → key=\"null\", expected=\"WoEs9XIVB6b\"",
+      "expected_key": "WoEs9XIVB6b",
       "actual_key": null
     },
     {
@@ -361,8 +361,8 @@
     {
       "url": "http://127.0.0.1:3000/timeout",
       "scenario": "S1_desktop",
-      "status": "FAIL_LOST",
-      "details": "https://apps.apple.com/app/id12345 → key=\"null\", expected=\"WoEs9XIVB6b\"",
+      "status": "INCONCLUSIVE",
+      "details": "Try 1: page.goto: Timeout 2000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:3000/timeout\", waiting until \"domcontentloaded\"\u001b[22m\n | Try 2: page.goto: Timeout 2000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:3000/timeout\", waiting until \"domcontentloaded\"\u001b[22m\n",
       "expected_key": "WoEs9XIVB6b",
       "actual_key": null
     },
@@ -393,8 +393,8 @@
     {
       "url": "http://127.0.0.1:3000/timeout",
       "scenario": "S4_desktop",
-      "status": "FAIL_LOST",
-      "details": "https://apps.apple.com/app/id12345 → key=\"null\", expected=\"WoEs9XIVB6b\"",
+      "status": "INCONCLUSIVE",
+      "details": "Try 1: page.goto: Timeout 2000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:3000/timeout\", waiting until \"domcontentloaded\"\u001b[22m\n | Try 2: page.goto: Timeout 2000ms exceeded.\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:3000/timeout\", waiting until \"domcontentloaded\"\u001b[22m\n",
       "expected_key": "WoEs9XIVB6b",
       "actual_key": null
     }
