@@ -8,6 +8,8 @@ on:
 jobs:
   monitor:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     concurrency:
       group: referral-monitor
       cancel-in-progress: false
@@ -39,6 +41,22 @@ jobs:
       - name: Generate Report
         if: always()
         run: node src/reporter.js
+
+      - name: Prepare Pages Directory
+        if: always()
+        run: |
+          mkdir -p public
+          cp report.html public/ || true
+          cp status.json public/ || true
+          cp -r screenshots public/ || true
+
+      - name: Deploy to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          keep_files: false
 
       - name: Upload Report Artifacts
         if: always()
