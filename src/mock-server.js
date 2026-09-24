@@ -18,9 +18,19 @@ const nav = `
   <a href="/timeout">Timeout</a>
 `;
 
+let staleKeyMemory = null;
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const key = url.searchParams.get('r') || '';
+  let staleKey = key;
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader && cookieHeader.includes('staleKey=')) {
+    staleKey = cookieHeader.split('staleKey=')[1].split(';')[0];
+  } else if (key) {
+    staleKey = key;
+  }
+  res.setHeader('Set-Cookie', `staleKey=${staleKey}; Path=/`);
 
   if (url.pathname === '/timeout') {
     setTimeout(() => {
@@ -86,7 +96,7 @@ const server = http.createServer((req, res) => {
     res.end(`<!DOCTYPE html><html><body>
       <h1>Stale Key</h1>
       ${nav}
-      <a href="https://apps.apple.com/app/id12345?r=OLD_KEY_ABC">App Store</a>
+      <a href="https://apps.apple.com/app/id12345?r=${staleKey}">App Store</a>
     </body></html>`);
   } else {
     res.writeHead(404);
