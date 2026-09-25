@@ -59,6 +59,15 @@ jobs:
           publish_dir: ./public
           keep_files: false
 
+      - name: Commit Subscribers
+        if: always()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add subscribers.json || true
+          git commit -m "chore: update telegram subscribers" || true
+          git push || true
+
       - name: Upload Report Artifacts
         if: always()
         uses: actions/upload-artifact@v4
