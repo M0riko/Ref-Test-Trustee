@@ -36,7 +36,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
-          CRAWLER_MAX_PAGES: 99999
+          CRAWLER_MAX_PAGES: 200
           FULL_SCENARIOS: 1
 
       - name: Generate Report
