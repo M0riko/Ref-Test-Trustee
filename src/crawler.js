@@ -179,16 +179,54 @@ export async function crawlSite(browser, startUrl, maxPages = 300, maxDepth = 10
     console.log(`Reached maxPages=${maxPages}. Remaining queued URLs are recorded as truncated, not as passes.`);
   }
 
-  console.log(`Discovery complete. Testing all ${allFoundUrls.length} discovered pages (no sampling). ${failedUrls.length} crawl errors, ${truncatedUrls.length} truncated.`);
+  // ==== PHASE 2: SAMPLING (To test the ENTIRE site, set DISABLE_SAMPLING=true in .env) ====
+  let sampledUrls = allFoundUrls;
+  let categoriesCount = null;
+  
+  if (process.env.DISABLE_SAMPLING !== 'true') {
+    const categoryMap = new Map();
+    for (const url of allFoundUrls) {
+      try {
+        const u = new URL(url);
+        const firstSegment = u.pathname.split('/').filter(Boolean)[0] || '';
+        const cat = firstSegment ? `/${firstSegment}` : '/';
+        if (!categoryMap.has(cat)) categoryMap.set(cat, []);
+        categoryMap.get(cat).push(url);
+      } catch {}
+    }
+
+    categoriesCount = categoryMap.size;
+    console.log(`Phase 2: Grouping ${allFoundUrls.length} pages into ${categoriesCount} categories.`);
+    
+    sampledUrls = [];
+    const MAX_PER_CAT = 3;
+    
+    for (const [cat, urls] of categoryMap.entries()) {
+      // Sort by length to get shortest (main) and longest (deepest article)
+      urls.sort((a, b) => a.length - b.length);
+      const selected = [];
+      if (urls.length > 0) selected.push(urls[0]); // Shortest
+      if (urls.length > 1 && MAX_PER_CAT > 1) selected.push(urls[urls.length - 1]); // Longest
+      if (urls.length > 2 && MAX_PER_CAT > 2) selected.push(urls[Math.floor(urls.length / 2)]); // Middle
+      
+      for (const s of selected) {
+        if (!sampledUrls.includes(s)) sampledUrls.push(s);
+      }
+    }
+    console.log(`Discovery complete. Sampled ${sampledUrls.length} pages out of ${allFoundUrls.length}.`);
+  } else {
+    console.log(`Discovery complete. Testing ALL ${allFoundUrls.length} discovered pages (sampling disabled).`);
+  }
+  // =========================================================================================
 
   return {
-    foundUrls: allFoundUrls,
+    foundUrls: sampledUrls,
     failedUrls,
     truncatedUrls,
     edges,
     sitemapCount: sitemapSeeds.length,
     discoveryTotal: allFoundUrls.length + truncatedUrls.length,
-    categoriesCount: null,
+    categoriesCount,
   };
 }
 
