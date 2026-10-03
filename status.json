@@ -1,28 +1,28 @@
 {
   "run_id": 1,
-  "started_at": "2026-10-02 11:45:07",
-  "finished_at": "2026-10-02 12:25:57",
+  "started_at": "2026-10-03 10:58:04",
+  "finished_at": "2026-10-03 11:34:11",
   "run_status": "COMPLETED",
-  "total_checks": 864,
-  "pages_crawled": 48,
-  "pass": 461,
-  "fail": 354,
-  "skipped": 49,
-  "no_store_link": 49,
+  "total_checks": 882,
+  "pages_crawled": 49,
+  "pass": 486,
+  "fail": 344,
+  "skipped": 52,
+  "no_store_link": 52,
   "inconclusive": 0,
   "overall": "FAIL",
   "consecutive_failures": 0,
   "coverage": {
-    "pages": 48,
+    "pages": 49,
     "sitemap": 0,
     "crawl_errors": 0,
-    "truncated": 501,
-    "edges": 17897
+    "truncated": 502,
+    "edges": 17811
   },
   "desktop": {
-    "PASS": 173,
-    "FAIL": 98,
-    "SKIPPED": 17,
+    "PASS": 177,
+    "FAIL": 97,
+    "SKIPPED": 20,
     "INCONCLUSIVE": 0
   },
   "desktop_mac": {
@@ -32,17 +32,17 @@
     "INCONCLUSIVE": 0
   },
   "mobile_ios": {
-    "PASS": 159,
-    "FAIL": 115,
-    "SKIPPED": 14,
+    "PASS": 173,
+    "FAIL": 108,
+    "SKIPPED": 13,
     "INCONCLUSIVE": 0
   },
   "mobile_android": {
-    "PASS": 129,
-    "FAIL": 141,
-    "SKIPPED": 18,
+    "PASS": 136,
+    "FAIL": 139,
+    "SKIPPED": 19,
     "INCONCLUSIVE": 0
   },
-  "generated_at": "2026-10-02T12:25:58.929Z",
+  "generated_at": "2026-10-03T11:34:12.501Z",
   "stale_after_hours": 36
 }
